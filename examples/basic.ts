@@ -1,7 +1,7 @@
 import { createDAL, type DBConfig } from "../src";
 
 const config: DBConfig = {
-  defaultDbType: "postgres",
+  defaultDbType: "pg",
   primary: {
     name: "aws-primary",
     provider: "aws",

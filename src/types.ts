@@ -1,17 +1,18 @@
 import type { QueryResult, QueryResultRow } from "pg";
 
 export type CloudProvider = "aws" | "gcp" | "azure" | (string & {});
-export type DatabaseType = "postgres" | (string & {});
+export type DatabaseType = "pg" | "postgres" | (string & {});
 
 export interface CloudDBConfig {
   name: string;
   provider: CloudProvider;
   dbType?: DatabaseType;
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
+  connectionString?: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  username?: string;
+  password?: string;
   ssl?: boolean;
 }
 

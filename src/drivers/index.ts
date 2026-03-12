@@ -42,7 +42,7 @@ export function resolveDatabaseType(
   cfg: CloudDBConfig,
   options: DriverPoolFactoryOptions
 ): DatabaseType {
-  return cfg.dbType ?? options.defaultDbType ?? "postgres";
+  return cfg.dbType ?? options.defaultDbType ?? "pg";
 }
 
 export function createDriverPool(
@@ -54,5 +54,6 @@ export function createDriverPool(
   return createPool(cfg, options);
 }
 
-// Built-in Postgres driver registration for MVP.
+// Built-in pg driver registration for current MVP.
+registerDriver("pg", (cfg, options) => createPostgresPool(cfg, options.queryTimeoutMs));
 registerDriver("postgres", (cfg, options) => createPostgresPool(cfg, options.queryTimeoutMs));

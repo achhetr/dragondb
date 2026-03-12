@@ -13,7 +13,8 @@
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "example": "tsx examples/basic.ts",
-    "example:failover": "tsx examples/failover-simulated.ts"
+    "example:failover": "tsx examples/failover-simulated.ts",
+    "example:yaml": "tsx examples/from-yaml.ts"
   },
   "keywords": [
     "postgres",
@@ -30,7 +31,9 @@
   "homepage": "https://www.linkedin.com/in/akashpaudel/",
   "license": "MIT",
   "dependencies": {
-    "pg": "^8.16.3"
+    "dotenv": "^17.3.1",
+    "pg": "^8.16.3",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

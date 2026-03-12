@@ -2,7 +2,7 @@
 
 ## Project Purpose
 
-This repository is a Node.js TypeScript library for a cloud-agnostic Postgres DAL with failover.
+This repository is a Node.js TypeScript library for a cloud-agnostic DAL with failover.
 
 ## Local Setup
 
@@ -16,8 +16,10 @@ npm run build
 
 - DB config model is `primary` + ordered `failovers`.
 - The system resolves `dbType` first, then uses the registered driver.
-- MVP supports Postgres by default.
+- Current release supports `pg` only.
 - Custom drivers can be added through `registerDriver()`.
+- Use YAML for non-secret topology and failover settings.
+- Use `.env` for secret values (credentials, URLs, passwords).
 
 ## Reliability Rules
 

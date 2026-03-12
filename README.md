@@ -1,16 +1,18 @@
-# SaiyanDB Postgres Wrapper
+# SaiyanDB DB Wrapper
 
-Cloud-agnostic Postgres DAL for Node.js with:
+Cloud-agnostic DAL for Node.js with:
 - one API for queries and CRUD helpers
 - one primary provider and multiple ordered failovers
 - provider health checks
 - structured logging hooks
+- YAML-based topology configuration
+- `.env`-based secret management
 
 ## Prerequisites
 
 - Node.js 18+
 - npm 9+
-- reachable Postgres instances
+- reachable pg instances
 
 ## Install For Local Development
 
@@ -30,40 +32,11 @@ npm install saiyandb-pg-wrapper
 ## Quick Usage
 
 ```ts
-import { createDAL, type DBConfig } from "saiyandb-pg-wrapper";
+import { createDAL, loadDBConfigFromYaml } from "saiyandb-pg-wrapper";
 
-const config: DBConfig = {
-  defaultDbType: "postgres",
-  primary: {
-    name: "aws-primary",
-    provider: "aws",
-    host: "aws-rds.example.com",
-    port: 5432,
-    database: "mydb",
-    username: "user",
-    password: "pass"
-  },
-  failovers: [
-    {
-      name: "gcp-failover",
-      provider: "gcp",
-      host: "gcp-sql.example.com",
-      port: 5432,
-      database: "mydb",
-      username: "user",
-      password: "pass"
-    },
-    {
-      name: "azure-failover",
-      provider: "azure",
-      host: "azure-postgres.example.com",
-      port: 5432,
-      database: "mydb",
-      username: "user",
-      password: "pass"
-    }
-  ]
-};
+const config = await loadDBConfigFromYaml("./config/db.config.yaml", {
+  envFilePath: ".env"
+});
 
 const dal = createDAL(config);
 const health = await dal.health();
@@ -74,6 +47,7 @@ await dal.close();
 ## API
 
 - `createDAL(config)` creates a DAL instance.
+- `loadDBConfigFromYaml(path, options?)` loads YAML topology and resolves env secrets.
 - `registerDriver(dbType, factory)` registers an engine driver factory.
 - `listRegisteredDrivers()` returns registered db types.
 - `resolveDatabaseType(config, options)` returns resolved db type for provider config.
@@ -88,7 +62,38 @@ await dal.close();
 
 - The wrapper resolves database type first, then selects a driver implementation.
 - Set `defaultDbType` once at root config, or override per provider with `dbType`.
-- MVP ships with built-in `postgres`; additional db types can be plugged in via `registerDriver`.
+- Current release ships with built-in `pg` support only.
+- Additional db types can be plugged in via `registerDriver`.
+
+## YAML + .env Configuration (Recommended)
+
+Use YAML for non-secret topology and failover behavior:
+- provider name
+- cloud provider type
+- role (`primary` or `failover`)
+- failover enabled/disabled
+- timeout settings
+
+Use `.env` for secrets:
+- DB URL/connection string
+- username/password
+- host/port overrides when needed
+
+Example files:
+- `config/db.config.yaml.example`
+- `.env.example`
+
+Load YAML and env values:
+
+```ts
+import { createDAL, loadDBConfigFromYaml } from "saiyandb-pg-wrapper";
+
+const config = await loadDBConfigFromYaml("./config/db.config.yaml", {
+  envFilePath: ".env"
+});
+
+const dal = createDAL(config);
+```
 
 ### Driver Registration (Extensibility)
 
@@ -129,6 +134,7 @@ npm run build
 npm test
 npm run example
 npm run example:failover
+npm run example:yaml
 ```
 
 ## First Commit Checklist
