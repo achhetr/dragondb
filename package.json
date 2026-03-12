@@ -17,7 +17,7 @@
     "prepare": "husky",
     "test": "npm run test:unit",
     "test:unit": "tsx --test tests/connectionManager.test.ts tests/drivers.test.ts tests/yamlConfig.test.ts",
-    "test:integration": "tsx --test tests/integration.pg.test.ts",
+    "test:integration": "tsx --test tests/integration/**/*.test.ts",
     "integration:up": "docker compose -f docker/integration/docker-compose.yml up -d primary-db failover-1-db failover-2-db",
     "integration:down": "docker compose -f docker/integration/docker-compose.yml down -v",
     "test:integration:docker": "docker compose -f docker/integration/docker-compose.yml run --rm --build test-runner",

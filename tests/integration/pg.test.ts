@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDAL, type DBConfig, type DBLogger } from "../src";
+import { createDAL, type DBConfig, type DBLogger } from "../../src";
 
 const primaryUrl = process.env.PRIMARY_DB_URL;
 const failoverUrls = (process.env.FAILOVER_DB_URLS ?? "")
