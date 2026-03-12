@@ -1,0 +1,40 @@
+{
+  "name": "saiyandb-pg-wrapper",
+  "version": "0.1.0",
+  "description": "Cloud-agnostic Postgres DAL for Node.js with primary and failover providers.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "example": "tsx examples/basic.ts",
+    "example:failover": "tsx examples/failover-simulated.ts"
+  },
+  "keywords": [
+    "postgres",
+    "dal",
+    "nodejs",
+    "failover",
+    "cloud-agnostic"
+  ],
+  "author": {
+    "name": "Akash Paudel",
+    "email": "akash.chhetri1@gmail.com",
+    "url": "https://www.linkedin.com/in/akashpaudel/"
+  },
+  "homepage": "https://www.linkedin.com/in/akashpaudel/",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/pg": "^8.18.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
