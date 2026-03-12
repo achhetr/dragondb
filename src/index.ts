@@ -1,6 +1,10 @@
 export { createDAL, type DAL } from "./dal";
 export { ConnectionManager } from "./connection/connectionManager";
-export { loadDBConfigFromYaml, type LoadYamlConfigOptions } from "./config/yamlConfig";
+export {
+  loadDBConfigFromYaml,
+  type LoadYamlConfigOptions,
+  type NamingStandard
+} from "./config/yamlConfig";
 export {
   createDriverPool,
   listRegisteredDrivers,

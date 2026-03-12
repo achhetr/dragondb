@@ -47,7 +47,7 @@ await dal.close();
 ## API
 
 - `createDAL(config)` creates a DAL instance.
-- `loadDBConfigFromYaml(path, options?)` loads YAML topology and resolves env secrets.
+- `loadDBConfigFromYaml(path, options?)` loads YAML topology with strict schema validation and resolves env secrets.
 - `registerDriver(dbType, factory)` registers an engine driver factory.
 - `listRegisteredDrivers()` returns registered db types.
 - `resolveDatabaseType(config, options)` returns resolved db type for provider config.
@@ -73,6 +73,7 @@ Use YAML for non-secret topology and failover behavior:
 - role (`primary` or `failover`)
 - failover enabled/disabled
 - timeout settings
+- naming standard for provider names (validated)
 
 Use `.env` for secrets:
 - DB URL/connection string
@@ -89,7 +90,9 @@ Load YAML and env values:
 import { createDAL, loadDBConfigFromYaml } from "saiyandb-pg-wrapper";
 
 const config = await loadDBConfigFromYaml("./config/db.config.yaml", {
-  envFilePath: ".env"
+  envFilePath: ".env",
+  namingStandard: "kebab-case", // kebab-case | snake_case | camelCase | pascalCase
+  strict: true
 });
 
 const dal = createDAL(config);

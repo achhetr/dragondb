@@ -20,6 +20,8 @@ npm run build
 - Custom drivers can be added through `registerDriver()`.
 - Use YAML for non-secret topology and failover settings.
 - Use `.env` for secret values (credentials, URLs, passwords).
+- YAML parsing is strict by default and should reject unknown keys.
+- Provider names in YAML must follow a selected naming standard (default `kebab-case`).
 
 ## Reliability Rules
 
