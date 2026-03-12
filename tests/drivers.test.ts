@@ -1,23 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDriverPool, registerDriver, resolveDatabaseType } from "../src/drivers";
-import type { CloudDBConfig, DBClient } from "../src/types";
+import { createDriverPool, resolveDatabaseType } from "../src/drivers";
+import type { CloudDBConfig } from "../src/types";
 
 function makeProvider(partial?: Partial<CloudDBConfig>): CloudDBConfig {
   return {
     name: partial?.name ?? "provider-1",
     provider: partial?.provider ?? "aws",
     dbType: partial?.dbType,
-    host: "localhost",
-    port: 5432,
-    database: "db",
-    username: "user",
-    password: "pass"
+    connectionString:
+      partial?.connectionString ?? "postgres://postgres:postgres@localhost:5432/testdb"
   };
-}
-
-function uniqueDbType(prefix: string): string {
-  return `unit-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 test("resolveDatabaseType uses provider dbType over default", () => {
@@ -26,22 +19,16 @@ test("resolveDatabaseType uses provider dbType over default", () => {
   assert.equal(result, "custom-db");
 });
 
-test("createDriverPool uses registered driver factory", () => {
-  const dbType = uniqueDbType("driver");
-  let called = false;
-
-  registerDriver(dbType, () => {
-    called = true;
-    const mockPool = {
-      query: async () => ({ rows: [{ ok: true }] }),
-      end: async () => undefined
-    };
-    return mockPool as DBClient;
-  });
-
-  const pool = createDriverPool(makeProvider({ dbType }), {});
+test("createDriverPool supports built-in pg driver", async () => {
+  const pool = createDriverPool(makeProvider({ dbType: "pg" }), {});
   assert.ok(pool);
-  assert.equal(called, true);
+  await pool.end();
+});
+
+test("createDriverPool supports built-in postgres alias", async () => {
+  const pool = createDriverPool(makeProvider({ dbType: "postgres" }), {});
+  assert.ok(pool);
+  await pool.end();
 });
 
 test("createDriverPool throws for unsupported db type", () => {

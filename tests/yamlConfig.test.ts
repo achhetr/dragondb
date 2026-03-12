@@ -18,16 +18,11 @@ providers:
   - name: primary-db
     role: primary
     provider: aws
-    database: appdb
     env:
-      host: DB_PRIMARY_HOST
-      port: DB_PRIMARY_PORT
-      username: DB_PRIMARY_USER
-      password: DB_PRIMARY_PASSWORD
+      connectionString: DB_PRIMARY_URL
   - name: failover-db
     role: failover
     provider: gcp
-    database: appdb
     env:
       connectionString: DB_FAILOVER_URL
 `;
@@ -35,18 +30,17 @@ providers:
 
     const config = await loadDBConfigFromYaml(yamlPath, {
       env: {
-        DB_PRIMARY_HOST: "localhost",
-        DB_PRIMARY_PORT: "5432",
-        DB_PRIMARY_USER: "postgres",
-        DB_PRIMARY_PASSWORD: "secret",
+        DB_PRIMARY_URL: "postgres://postgres:secret@localhost:5432/appdb",
         DB_FAILOVER_URL: "postgres://postgres:secret@localhost:5433/appdb"
       }
     });
 
     assert.equal(config.defaultDbType, "pg");
     assert.equal(config.primary.name, "primary-db");
-    assert.equal(config.primary.host, "localhost");
-    assert.equal(config.primary.password, "secret");
+    assert.equal(
+      config.primary.connectionString,
+      "postgres://postgres:secret@localhost:5432/appdb"
+    );
     assert.equal(config.failovers?.[0]?.name, "failover-db");
     assert.equal(
       config.failovers?.[0]?.connectionString,
@@ -69,7 +63,8 @@ providers:
   - name: primary-db
     role: primary
     provider: aws
-    database: appdb
+    env:
+      connectionString: PRIMARY_URL
 `;
     await writeFile(yamlPath, yaml, "utf8");
 
@@ -90,7 +85,8 @@ providers:
   - name: PrimaryDB
     role: primary
     provider: aws
-    database: appdb
+    env:
+      connectionString: PRIMARY_URL
 `;
     await writeFile(yamlPath, yaml, "utf8");
 
@@ -111,12 +107,14 @@ providers:
   - name: primary_db
     role: primary
     provider: aws
-    database: appdb
+    env:
+      connectionString: PRIMARY_URL
 `;
     await writeFile(yamlPath, yaml, "utf8");
 
     const config = await loadDBConfigFromYaml(yamlPath, {
-      namingStandard: "snake_case"
+      namingStandard: "snake_case",
+      env: { PRIMARY_URL: "postgres://postgres:postgres@localhost:5432/appdb" }
     });
     assert.equal(config.primary.name, "primary_db");
   } finally {
@@ -136,13 +134,38 @@ providers:
     role: primary
     provider: aws
     env:
-      password: PRIMARY_PASSWORD
+      connectionString: PRIMARY_URL
 `;
     await writeFile(yamlPath, yaml, "utf8");
 
     await assert.rejects(
       () => loadDBConfigFromYaml(yamlPath, { env: {} }),
       /Missing required env vars referenced by YAML/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("yaml schema rejects non-connectionString env keys", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "saiyandb-yaml-test-"));
+  const yamlPath = join(dir, "db.yaml");
+
+  try {
+    const yaml = `
+defaultDbType: pg
+providers:
+  - name: primary-db
+    role: primary
+    provider: aws
+    env:
+      host: DB_PRIMARY_HOST
+`;
+    await writeFile(yamlPath, yaml, "utf8");
+
+    await assert.rejects(
+      () => loadDBConfigFromYaml(yamlPath),
+      /Unknown keys at providers\[0\]\.env/
     );
   } finally {
     await rm(dir, { recursive: true, force: true });

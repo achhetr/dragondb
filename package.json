@@ -1,7 +1,7 @@
 {
   "name": "saiyandb",
   "version": "0.1.0",
-  "description": "Cloud-agnostic DB DAL for Node.js with pg support, failover, and extensible drivers.",
+  "description": "Cloud-agnostic DB DAL for Node.js with pg support, failover, and YAML+env config.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

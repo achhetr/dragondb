@@ -10,36 +10,22 @@ providers:
     role: primary
     provider: aws
     dbType: pg
-    database: appdb
     ssl: false
     env:
-      host: DB_PRIMARY_HOST
-      port: DB_PRIMARY_PORT
-      username: DB_PRIMARY_USER
-      password: DB_PRIMARY_PASSWORD
-      # Optional: use URL instead of discrete fields
-      # connectionString: DB_PRIMARY_URL
+      connectionString: DB_PRIMARY_URL
 
   - name: gcp-failover-1
     role: failover
     provider: gcp
     dbType: pg
-    database: appdb
     enabled: true
     env:
-      host: DB_FAILOVER_1_HOST
-      port: DB_FAILOVER_1_PORT
-      username: DB_FAILOVER_1_USER
-      password: DB_FAILOVER_1_PASSWORD
+      connectionString: DB_FAILOVER_1_URL
 
   - name: azure-failover-2
     role: failover
     provider: azure
     dbType: pg
-    database: appdb
     enabled: true
     env:
-      host: DB_FAILOVER_2_HOST
-      port: DB_FAILOVER_2_PORT
-      username: DB_FAILOVER_2_USER
-      password: DB_FAILOVER_2_PASSWORD
+      connectionString: DB_FAILOVER_2_URL

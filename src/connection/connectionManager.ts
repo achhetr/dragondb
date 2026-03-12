@@ -18,22 +18,34 @@ interface ProviderRuntime {
   isPrimary: boolean;
 }
 
+interface ConnectionManagerDeps {
+  createPool: typeof createDriverPool;
+  resolveDbType: typeof resolveDatabaseType;
+}
+
 export class ConnectionManager {
   private readonly logger: DBLogger;
   private readonly primary: ProviderRuntime;
   private readonly failovers: ProviderRuntime[];
   private readonly healthcheckTimeoutMs: number;
   private readonly primaryRetryCooldownMs: number;
+  private readonly createPool: typeof createDriverPool;
+  private readonly resolveDbType: typeof resolveDatabaseType;
   private primaryFailedAtMs?: number;
 
-  constructor(private readonly config: DBConfig) {
+  constructor(
+    private readonly config: DBConfig,
+    deps: Partial<ConnectionManagerDeps> = {}
+  ) {
+    this.createPool = deps.createPool ?? createDriverPool;
+    this.resolveDbType = deps.resolveDbType ?? resolveDatabaseType;
     this.logger = config.logger ?? defaultLogger;
     this.healthcheckTimeoutMs = config.healthcheckTimeoutMs ?? 3000;
     this.primaryRetryCooldownMs = config.primaryRetryCooldownMs ?? 2000;
 
     this.primary = {
       config: config.primary,
-      pool: createDriverPool(config.primary, {
+      pool: this.createPool(config.primary, {
         defaultDbType: config.defaultDbType,
         queryTimeoutMs: config.queryTimeoutMs
       }),
@@ -41,7 +53,7 @@ export class ConnectionManager {
     };
     this.failovers = (config.failovers ?? []).map((failover) => ({
       config: failover,
-      pool: createDriverPool(failover, {
+      pool: this.createPool(failover, {
         defaultDbType: config.defaultDbType,
         queryTimeoutMs: config.queryTimeoutMs
       }),
@@ -83,7 +95,7 @@ export class ConnectionManager {
       queryId,
       providerName: target.config.name,
       provider: target.config.provider,
-      dbType: resolveDatabaseType(target.config, { defaultDbType: this.config.defaultDbType }),
+      dbType: this.resolveDbType(target.config, { defaultDbType: this.config.defaultDbType }),
       isPrimary: target.isPrimary,
       attempt
     });

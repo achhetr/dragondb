@@ -6,37 +6,6 @@ export interface DriverPoolFactoryOptions {
   queryTimeoutMs?: number;
 }
 
-export type DriverFactory = (cfg: CloudDBConfig, options: DriverPoolFactoryOptions) => DBClient;
-
-const driverRegistry = new Map<DatabaseType, DriverFactory>();
-
-export function registerDriver(
-  dbType: DatabaseType,
-  factory: DriverFactory,
-  options: { overwrite?: boolean } = {}
-): void {
-  if (!options.overwrite && driverRegistry.has(dbType)) {
-    throw new Error(
-      `Driver for database type '${dbType}' already exists. Pass { overwrite: true } to replace it.`
-    );
-  }
-  driverRegistry.set(dbType, factory);
-}
-
-export function listRegisteredDrivers(): DatabaseType[] {
-  return Array.from(driverRegistry.keys());
-}
-
-function getDriver(dbType: DatabaseType): DriverFactory {
-  const factory = driverRegistry.get(dbType);
-  if (!factory) {
-    const registered = listRegisteredDrivers();
-    const supported = registered.length > 0 ? registered.join(", ") : "none";
-    throw new Error(`Unsupported database type '${dbType}'. Registered drivers: ${supported}`);
-  }
-  return factory;
-}
-
 export function resolveDatabaseType(
   cfg: CloudDBConfig,
   options: DriverPoolFactoryOptions
@@ -49,10 +18,8 @@ export function createDriverPool(
   options: DriverPoolFactoryOptions = {}
 ): DBClient {
   const dbType = resolveDatabaseType(cfg, options);
-  const createPool = getDriver(dbType);
-  return createPool(cfg, options);
+  if (dbType !== "pg" && dbType !== "postgres") {
+    throw new Error(`Unsupported database type '${dbType}'. Supported drivers: pg, postgres`);
+  }
+  return createPostgresPool(cfg, options.queryTimeoutMs);
 }
-
-// Built-in pg driver registration for current MVP.
-registerDriver("pg", (cfg, options) => createPostgresPool(cfg, options.queryTimeoutMs));
-registerDriver("postgres", (cfg, options) => createPostgresPool(cfg, options.queryTimeoutMs));

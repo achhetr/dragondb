@@ -1,5 +1,6 @@
 import { ConnectionManager } from "./connection/connectionManager";
-import type { DBConfig, DBRow, HealthSnapshot, QueryExecutionResult } from "./types";
+import { loadDBConfigFromYaml, type LoadYamlConfigOptions } from "./config/yamlConfig";
+import type { DBLogger, DBRow, HealthSnapshot, QueryExecutionResult } from "./types";
 
 const IDENTIFIER_REGEX = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -29,9 +30,12 @@ export interface DAL {
   close(): Promise<void>;
 }
 
-export function createDAL(config: DBConfig): DAL {
-  const manager = new ConnectionManager(config);
+export interface CreateDALFromYamlOptions extends LoadYamlConfigOptions {
+  logger?: DBLogger;
+  primaryRetryCooldownMs?: number;
+}
 
+function createDALFromConnectionManager(manager: ConnectionManager): DAL {
   return {
     async query<T extends DBRow = DBRow>(
       sql: string,
@@ -77,4 +81,18 @@ export function createDAL(config: DBConfig): DAL {
       await manager.close();
     }
   };
+}
+
+export async function createDALFromYaml(
+  yamlPath: string,
+  options: CreateDALFromYamlOptions = {}
+): Promise<DAL> {
+  const { logger, primaryRetryCooldownMs, ...yamlOptions } = options;
+  const loaded = await loadDBConfigFromYaml(yamlPath, yamlOptions);
+  const manager = new ConnectionManager({
+    ...loaded,
+    logger,
+    primaryRetryCooldownMs
+  });
+  return createDALFromConnectionManager(manager);
 }

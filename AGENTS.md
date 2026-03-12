@@ -15,11 +15,11 @@ npm run build
 ## Runtime Model
 
 - DB config model is `primary` + ordered `failovers`.
-- The system resolves `dbType` first, then uses the registered driver.
+- The system resolves `dbType` first, then uses built-in `pg` support.
 - Current release supports `pg` only.
-- Custom drivers can be added through `registerDriver()`.
 - Use YAML for non-secret topology and failover settings.
 - Use `.env` for secret values (credentials, URLs, passwords).
+- Providers should use env-based `connectionString` references in YAML.
 - YAML parsing is strict by default and should reject unknown keys.
 - Provider names in YAML must follow a selected naming standard (default `kebab-case`).
 

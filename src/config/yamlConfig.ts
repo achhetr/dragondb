@@ -11,11 +11,6 @@ interface YamlFailoverConfig {
 
 interface YamlProviderEnvRefs {
   connectionString?: string;
-  host?: string;
-  port?: string;
-  database?: string;
-  username?: string;
-  password?: string;
 }
 
 interface YamlProviderConfig {
@@ -25,12 +20,6 @@ interface YamlProviderConfig {
   dbType?: DatabaseType;
   enabled?: boolean;
   ssl?: boolean;
-  connectionString?: string;
-  host?: string;
-  port?: number;
-  database?: string;
-  username?: string;
-  password?: string;
   env?: YamlProviderEnvRefs;
 }
 
@@ -63,17 +52,6 @@ function pickValue<T>(
     }
   }
   return inlineValue;
-}
-
-function parsePort(value: number | string | undefined): number | undefined {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`Invalid port value '${String(value)}' in YAML/env config.`);
-  }
-  return parsed;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -162,21 +140,7 @@ function validateYamlConfig(
 
       pushUnknownKeysError(
         provider,
-        [
-          "name",
-          "role",
-          "provider",
-          "dbType",
-          "enabled",
-          "ssl",
-          "connectionString",
-          "host",
-          "port",
-          "database",
-          "username",
-          "password",
-          "env"
-        ],
+        ["name", "role", "provider", "dbType", "enabled", "ssl", "env"],
         path,
         strict,
         errors
@@ -203,45 +167,23 @@ function validateYamlConfig(
       if (provider.ssl !== undefined && typeof provider.ssl !== "boolean") {
         errors.push(`${path}.ssl must be a boolean.`);
       }
-      if (
-        provider.connectionString !== undefined &&
-        typeof provider.connectionString !== "string"
-      ) {
-        errors.push(`${path}.connectionString must be a string.`);
-      }
-      if (provider.host !== undefined && typeof provider.host !== "string") {
-        errors.push(`${path}.host must be a string.`);
-      }
-      if (provider.port !== undefined && typeof provider.port !== "number") {
-        errors.push(`${path}.port must be a number.`);
-      }
-      if (provider.database !== undefined && typeof provider.database !== "string") {
-        errors.push(`${path}.database must be a string.`);
-      }
-      if (provider.username !== undefined && typeof provider.username !== "string") {
-        errors.push(`${path}.username must be a string.`);
-      }
-      if (provider.password !== undefined && typeof provider.password !== "string") {
-        errors.push(`${path}.password must be a string.`);
-      }
-
       if (provider.env !== undefined) {
         if (!isRecord(provider.env)) {
           errors.push(`${path}.env must be an object.`);
         } else {
-          pushUnknownKeysError(
-            provider.env,
-            ["connectionString", "host", "port", "database", "username", "password"],
-            `${path}.env`,
-            strict,
-            errors
-          );
+          pushUnknownKeysError(provider.env, ["connectionString"], `${path}.env`, strict, errors);
           for (const [envKey, envValue] of Object.entries(provider.env)) {
             if (typeof envValue !== "string" || envValue.length === 0) {
               errors.push(`${path}.env.${envKey} must be a non-empty string env key.`);
             }
           }
         }
+      } else {
+        errors.push(`${path}.env is required and must include connectionString.`);
+      }
+
+      if (isRecord(provider.env) && !provider.env.connectionString) {
+        errors.push(`${path}.env.connectionString is required.`);
       }
     });
   }
@@ -274,23 +216,13 @@ function validateEnvReferences(parsed: YamlDBConfig, env: EnvMap): void {
 
 function resolveProvider(provider: YamlProviderConfig, env: EnvMap): CloudDBConfig {
   const envRefs = provider.env ?? {};
-  const connectionString = pickValue(provider.connectionString, envRefs.connectionString, env);
-  const host = pickValue(provider.host, envRefs.host, env);
-  const port = parsePort(pickValue(provider.port, envRefs.port, env));
-  const database = pickValue(provider.database, envRefs.database, env);
-  const username = pickValue(provider.username, envRefs.username, env);
-  const password = pickValue(provider.password, envRefs.password, env);
+  const connectionString = pickValue<string>(undefined, envRefs.connectionString, env);
 
   return {
     name: provider.name,
     provider: provider.provider,
     dbType: provider.dbType ?? "pg",
     connectionString,
-    host,
-    port,
-    database,
-    username,
-    password,
     ssl: provider.ssl
   };
 }

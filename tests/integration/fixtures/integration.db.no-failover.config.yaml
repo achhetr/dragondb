@@ -1,0 +1,14 @@
+defaultDbType: pg
+queryTimeoutMs: 5000
+healthcheckTimeoutMs: 3000
+
+failover:
+  enabled: false
+
+providers:
+  - name: primary-real
+    role: primary
+    provider: aws
+    dbType: pg
+    env:
+      connectionString: PRIMARY_DB_URL

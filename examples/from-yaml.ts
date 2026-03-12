@@ -1,11 +1,9 @@
-import { createDAL, loadDBConfigFromYaml } from "../src";
+import { createDALFromYaml } from "../src";
 
 async function run(): Promise<void> {
-  const config = await loadDBConfigFromYaml("./config/db.config.yaml.example", {
+  const dal = await createDALFromYaml("./config/db.config.yaml.example", {
     envFilePath: ".env"
   });
-
-  const dal = createDAL(config);
   const health = await dal.health();
   console.log("Health:", health);
 

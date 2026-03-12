@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createDAL, loadDBConfigFromYaml, type DBConfig, type DBLogger } from "../../src";
+import { createDALFromYaml } from "../../src";
+import type { DBLogger } from "../../src/types";
 
 const primaryUrl = process.env.PRIMARY_DB_URL;
 const failoverUrls = (process.env.FAILOVER_DB_URLS ?? "")
@@ -15,6 +16,9 @@ const unreachableFailoverOneUrl = "postgres://postgres:postgres@127.0.0.1:2/saiy
 const unreachableFailoverTwoUrl = "postgres://postgres:postgres@127.0.0.1:3/saiyandb_failover2";
 const yamlConfigPath = fileURLToPath(
   new URL("./fixtures/integration.db.config.yaml", import.meta.url)
+);
+const noFailoverYamlPath = fileURLToPath(
+  new URL("./fixtures/integration.db.no-failover.config.yaml", import.meta.url)
 );
 
 type LogLevel = "debug" | "info" | "warn" | "error";
@@ -46,24 +50,20 @@ interface IntegrationConfigOverrides {
   primary?: string;
   failover1?: string;
   failover2?: string;
-  primaryRetryCooldownMs?: number;
   logger?: DBLogger;
+  primaryRetryCooldownMs?: number;
 }
 
-async function createConfigFromYaml(overrides: IntegrationConfigOverrides = {}): Promise<DBConfig> {
-  const config = await loadDBConfigFromYaml(yamlConfigPath, {
+async function createDalFromYaml(overrides: IntegrationConfigOverrides = {}) {
+  return createDALFromYaml(yamlConfigPath, {
     env: {
       PRIMARY_DB_URL: overrides.primary ?? (primaryUrl as string),
       FAILOVER_DB_URL_1: overrides.failover1 ?? (failoverOneUrl as string),
       FAILOVER_DB_URL_2: overrides.failover2 ?? (failoverTwoUrl as string)
-    }
-  });
-
-  return {
-    ...config,
+    },
     logger: overrides.logger,
     primaryRetryCooldownMs: overrides.primaryRetryCooldownMs ?? 5_000
-  };
+  });
 }
 
 const missingEnv = [
@@ -80,8 +80,7 @@ if (missingEnv.length > 0) {
   });
 } else {
   test("integration: query succeeds against real primary", async () => {
-    const config = await createConfigFromYaml();
-    const dal = createDAL(config);
+    const dal = await createDalFromYaml();
     const response = await dal.query("SELECT 1 as up");
     assert.equal(response.result.rows[0]?.up, 1);
     assert.equal(response.meta.providerName, "primary-real");
@@ -91,13 +90,11 @@ if (missingEnv.length > 0) {
 
   test("integration: ordered failover reaches second failover and logs events", async () => {
     const entries: LogEntry[] = [];
-    const config = await createConfigFromYaml({
+    const dal = await createDalFromYaml({
       logger: createTestLogger(entries),
       primary: unreachablePrimaryUrl,
       failover1: unreachableFailoverOneUrl
     });
-
-    const dal = createDAL(config);
     const response = await dal.query("SELECT 1 as up");
     assert.equal(response.result.rows[0]?.up, 1);
     assert.equal(response.meta.providerName, "failover-2-real");
@@ -125,14 +122,12 @@ if (missingEnv.length > 0) {
 
   test("integration: throws when every provider is unavailable", async () => {
     const entries: LogEntry[] = [];
-    const config = await createConfigFromYaml({
+    const dal = await createDalFromYaml({
       logger: createTestLogger(entries),
       primary: unreachablePrimaryUrl,
       failover1: unreachableFailoverOneUrl,
       failover2: unreachableFailoverTwoUrl
     });
-
-    const dal = createDAL(config);
     await assert.rejects(
       () => dal.query("SELECT 1 as up"),
       /All providers failed.*primary-real.*failover-1-real.*failover-2-real/
@@ -142,29 +137,24 @@ if (missingEnv.length > 0) {
     await dal.close();
   });
 
-  test("integration: throws when failover list is empty and primary is unavailable", async () => {
-    const yamlConfig = await createConfigFromYaml({
-      primary: unreachablePrimaryUrl
+  test("integration: throws when no failover providers are enabled in YAML", async () => {
+    const dal = await createDALFromYaml(noFailoverYamlPath, {
+      env: {
+        PRIMARY_DB_URL: unreachablePrimaryUrl
+      },
+      primaryRetryCooldownMs: 5_000
     });
-    const config: DBConfig = {
-      ...yamlConfig,
-      failovers: []
-    };
-
-    const dal = createDAL(config);
     await assert.rejects(() => dal.query("SELECT 1 as up"), /All providers failed.*primary-real/);
     await dal.close();
   });
 
   test("integration: cooldown skips primary retry and logs cooldown event", async () => {
     const entries: LogEntry[] = [];
-    const config = await createConfigFromYaml({
+    const dal = await createDalFromYaml({
       logger: createTestLogger(entries),
       primaryRetryCooldownMs: 60_000,
       primary: unreachablePrimaryUrl
     });
-
-    const dal = createDAL(config);
     const firstResponse = await dal.query("SELECT 1 as up");
     const secondResponse = await dal.query("SELECT 1 as up");
 
