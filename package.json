@@ -1,5 +1,5 @@
 {
-  "name": "saiyandb-pg-wrapper",
+  "name": "saiyandb",
   "version": "0.1.0",
   "description": "Cloud-agnostic Postgres DAL for Node.js with primary and failover providers.",
   "main": "dist/index.js",

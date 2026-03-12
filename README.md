@@ -26,13 +26,13 @@ npm run build
 ## Install As A Dependency
 
 ```bash
-npm install saiyandb-pg-wrapper
+npm install saiyandb
 ```
 
 ## Quick Usage
 
 ```ts
-import { createDAL, loadDBConfigFromYaml } from "saiyandb-pg-wrapper";
+import { createDAL, loadDBConfigFromYaml } from "saiyandb";
 
 const config = await loadDBConfigFromYaml("./config/db.config.yaml", {
   envFilePath: ".env"
@@ -87,7 +87,7 @@ Example files:
 Load YAML and env values:
 
 ```ts
-import { createDAL, loadDBConfigFromYaml } from "saiyandb-pg-wrapper";
+import { createDAL, loadDBConfigFromYaml } from "saiyandb";
 
 const config = await loadDBConfigFromYaml("./config/db.config.yaml", {
   envFilePath: ".env",
@@ -101,7 +101,7 @@ const dal = createDAL(config);
 ### Driver Registration (Extensibility)
 
 ```ts
-import { registerDriver } from "saiyandb-pg-wrapper";
+import { registerDriver } from "saiyandb";
 
 registerDriver("my-future-db", (cfg) => {
   // Return a pool-like object compatible with query()/end().
