@@ -1,7 +1,19 @@
-import type { QueryResult, QueryResultRow } from "pg";
-
 export type CloudProvider = "aws" | "gcp" | "azure" | (string & {});
 export type DatabaseType = "pg" | "postgres" | (string & {});
+export type DBRow = Record<string, unknown>;
+
+export interface DBQueryResult<T extends DBRow = DBRow> {
+  rows: T[];
+  rowCount?: number | null;
+}
+
+export interface DBClient {
+  query<T extends DBRow = DBRow>(
+    sql: string,
+    params?: readonly unknown[]
+  ): Promise<DBQueryResult<T>>;
+  end(): Promise<void>;
+}
 
 export interface CloudDBConfig {
   name: string;
@@ -30,6 +42,7 @@ export interface DBConfig {
   logger?: DBLogger;
   queryTimeoutMs?: number;
   healthcheckTimeoutMs?: number;
+  primaryRetryCooldownMs?: number;
 }
 
 export interface ProviderHealth {
@@ -48,13 +61,17 @@ export interface HealthSnapshot {
 }
 
 export interface QueryExecutionMeta {
+  event: "query-success";
+  queryId: string;
   providerName: string;
   providerType: CloudProvider;
   isPrimary: boolean;
   attemptedAt: string;
+  durationMs: number;
+  attempt: number;
 }
 
-export interface QueryExecutionResult<T extends QueryResultRow = QueryResultRow> {
-  result: QueryResult<T>;
+export interface QueryExecutionResult<T extends DBRow = DBRow> {
+  result: DBQueryResult<T>;
   meta: QueryExecutionMeta;
 }

@@ -9,12 +9,18 @@ function sanitizeMeta(meta?: Record<string, unknown>): Record<string, unknown> |
   const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(meta)) {
     const lowered = key.toLowerCase();
-    sanitized[key] = blockedKeys.some((blocked) => lowered.includes(blocked)) ? "[REDACTED]" : value;
+    sanitized[key] = blockedKeys.some((blocked) => lowered.includes(blocked))
+      ? "[REDACTED]"
+      : value;
   }
   return sanitized;
 }
 
-function print(level: "debug" | "info" | "warn" | "error", message: string, meta?: Record<string, unknown>): void {
+function print(
+  level: "debug" | "info" | "warn" | "error",
+  message: string,
+  meta?: Record<string, unknown>
+): void {
   const payload = sanitizeMeta(meta);
   if (level === "error") {
     console.error(`[saiyandb] ${message}`, payload ?? "");

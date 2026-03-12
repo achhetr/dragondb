@@ -48,7 +48,10 @@ providers:
     assert.equal(config.primary.host, "localhost");
     assert.equal(config.primary.password, "secret");
     assert.equal(config.failovers?.[0]?.name, "failover-db");
-    assert.equal(config.failovers?.[0]?.connectionString, "postgres://postgres:secret@localhost:5433/appdb");
+    assert.equal(
+      config.failovers?.[0]?.connectionString,
+      "postgres://postgres:secret@localhost:5433/appdb"
+    );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -116,6 +119,31 @@ providers:
       namingStandard: "snake_case"
     });
     assert.equal(config.primary.name, "primary_db");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("yaml env references must exist in runtime env", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "saiyandb-yaml-test-"));
+  const yamlPath = join(dir, "db.yaml");
+
+  try {
+    const yaml = `
+defaultDbType: pg
+providers:
+  - name: primary-db
+    role: primary
+    provider: aws
+    env:
+      password: PRIMARY_PASSWORD
+`;
+    await writeFile(yamlPath, yaml, "utf8");
+
+    await assert.rejects(
+      () => loadDBConfigFromYaml(yamlPath, { env: {} }),
+      /Missing required env vars referenced by YAML/
+    );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

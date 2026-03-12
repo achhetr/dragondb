@@ -1,13 +1,12 @@
-import type { Pool } from "pg";
 import { createPostgresPool } from "../providers/postgresProvider";
-import type { CloudDBConfig, DatabaseType } from "../types";
+import type { CloudDBConfig, DBClient, DatabaseType } from "../types";
 
-interface DriverPoolFactoryOptions {
+export interface DriverPoolFactoryOptions {
   defaultDbType?: DatabaseType;
   queryTimeoutMs?: number;
 }
 
-export type DriverFactory = (cfg: CloudDBConfig, options: DriverPoolFactoryOptions) => Pool;
+export type DriverFactory = (cfg: CloudDBConfig, options: DriverPoolFactoryOptions) => DBClient;
 
 const driverRegistry = new Map<DatabaseType, DriverFactory>();
 
@@ -48,7 +47,7 @@ export function resolveDatabaseType(
 export function createDriverPool(
   cfg: CloudDBConfig,
   options: DriverPoolFactoryOptions = {}
-): Pool {
+): DBClient {
   const dbType = resolveDatabaseType(cfg, options);
   const createPool = getDriver(dbType);
   return createPool(cfg, options);

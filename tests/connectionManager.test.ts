@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Pool } from "pg";
 import { ConnectionManager } from "../src/connection/connectionManager";
 import { registerDriver } from "../src/drivers";
-import type { CloudDBConfig, DBConfig, DBLogger } from "../src/types";
+import type { CloudDBConfig, DBClient, DBConfig, DBLogger } from "../src/types";
 
 interface ProviderBehavior {
   failQueries?: boolean;
@@ -52,7 +51,7 @@ function registerMockDriver(dbType: string, behavior: Record<string, ProviderBeh
         },
         end: async () => undefined
       };
-      return mockPool as unknown as Pool;
+      return mockPool as DBClient;
     },
     { overwrite: true }
   );
@@ -120,5 +119,38 @@ test("checkAll marks overallHealthy when any provider is healthy", async () => {
   assert.equal(health.primary.healthy, false);
   assert.equal(health.failovers[0]?.healthy, true);
   assert.equal(health.overallHealthy, true);
+  await manager.close();
+});
+
+test("primary cooldown skips immediate retry after a failure", async () => {
+  const dbType = uniqueDbType("cooldown");
+  let primaryCalls = 0;
+
+  registerDriver(
+    dbType,
+    (cfg) => {
+      const mockPool = {
+        query: async (sql: string) => {
+          if (cfg.name === "primary") {
+            primaryCalls += 1;
+            throw new Error("primary down");
+          }
+          return { rows: [{ provider: cfg.name, sql }] };
+        },
+        end: async () => undefined
+      };
+      return mockPool as DBClient;
+    },
+    { overwrite: true }
+  );
+
+  const manager = new ConnectionManager({
+    ...makeConfig(dbType),
+    primaryRetryCooldownMs: 10_000
+  });
+
+  await manager.query("SELECT 1");
+  await manager.query("SELECT 2");
+  assert.equal(primaryCalls, 1);
   await manager.close();
 });

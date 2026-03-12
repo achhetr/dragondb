@@ -11,3 +11,5 @@ dist/
 
 coverage/
 .nyc_output/
+.eslintcache
+.husky/_

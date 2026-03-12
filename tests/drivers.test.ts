@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Pool } from "pg";
 import { createDriverPool, registerDriver, resolveDatabaseType } from "../src/drivers";
-import type { CloudDBConfig } from "../src/types";
+import type { CloudDBConfig, DBClient } from "../src/types";
 
 function makeProvider(partial?: Partial<CloudDBConfig>): CloudDBConfig {
   return {
@@ -37,7 +36,7 @@ test("createDriverPool uses registered driver factory", () => {
       query: async () => ({ rows: [{ ok: true }] }),
       end: async () => undefined
     };
-    return mockPool as unknown as Pool;
+    return mockPool as DBClient;
   });
 
   const pool = createDriverPool(makeProvider({ dbType }), {});

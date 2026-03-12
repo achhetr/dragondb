@@ -51,7 +51,11 @@ export interface LoadYamlConfigOptions {
   namingStandard?: NamingStandard;
 }
 
-function pickValue<T>(inlineValue: T | undefined, envKey: string | undefined, env: EnvMap): T | undefined {
+function pickValue<T>(
+  inlineValue: T | undefined,
+  envKey: string | undefined,
+  env: EnvMap
+): T | undefined {
   if (envKey) {
     const raw = env[envKey];
     if (raw !== undefined && raw !== "") {
@@ -76,21 +80,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function assertNoUnknownKeys(
-  obj: Record<string, unknown>,
-  allowed: string[],
-  path: string,
-  strict: boolean
-): void {
-  if (!strict) {
-    return;
-  }
-  const extras = Object.keys(obj).filter((key) => !allowed.includes(key));
-  if (extras.length > 0) {
-    throw new Error(`Unknown keys at ${path}: ${extras.join(", ")}`);
-  }
-}
-
 function namingRegex(standard: NamingStandard): RegExp {
   switch (standard) {
     case "kebab-case":
@@ -106,12 +95,19 @@ function namingRegex(standard: NamingStandard): RegExp {
   }
 }
 
-function assertNaming(name: string, standard: NamingStandard, path: string): void {
-  const regex = namingRegex(standard);
-  if (!regex.test(name)) {
-    throw new Error(
-      `${path} must follow ${standard}. Received '${name}'.`
-    );
+function pushUnknownKeysError(
+  obj: Record<string, unknown>,
+  allowed: string[],
+  path: string,
+  strict: boolean,
+  errors: string[]
+): void {
+  if (!strict) {
+    return;
+  }
+  const extras = Object.keys(obj).filter((key) => !allowed.includes(key));
+  if (extras.length > 0) {
+    errors.push(`Unknown keys at ${path}: ${extras.join(", ")}`);
   }
 }
 
@@ -120,130 +116,164 @@ function validateYamlConfig(
   strict: boolean,
   namingStandard: NamingStandard
 ): YamlDBConfig {
+  const errors: string[] = [];
   if (!isRecord(raw)) {
     throw new Error("YAML config root must be an object.");
   }
 
-  assertNoUnknownKeys(
+  pushUnknownKeysError(
     raw,
     ["defaultDbType", "queryTimeoutMs", "healthcheckTimeoutMs", "failover", "providers"],
     "root",
-    strict
+    strict,
+    errors
   );
 
-  const failover = raw.failover;
-  if (failover !== undefined) {
-    if (!isRecord(failover)) {
-      throw new Error("Field 'failover' must be an object.");
-    }
-    assertNoUnknownKeys(failover, ["enabled"], "failover", strict);
-    if (failover.enabled !== undefined && typeof failover.enabled !== "boolean") {
-      throw new Error("Field 'failover.enabled' must be a boolean.");
+  if (raw.failover !== undefined) {
+    if (!isRecord(raw.failover)) {
+      errors.push("Field 'failover' must be an object.");
+    } else {
+      pushUnknownKeysError(raw.failover, ["enabled"], "failover", strict, errors);
+      if (raw.failover.enabled !== undefined && typeof raw.failover.enabled !== "boolean") {
+        errors.push("Field 'failover.enabled' must be a boolean.");
+      }
     }
   }
 
   if (raw.defaultDbType !== undefined && typeof raw.defaultDbType !== "string") {
-    throw new Error("Field 'defaultDbType' must be a string.");
+    errors.push("Field 'defaultDbType' must be a string.");
   }
   if (raw.queryTimeoutMs !== undefined && typeof raw.queryTimeoutMs !== "number") {
-    throw new Error("Field 'queryTimeoutMs' must be a number.");
+    errors.push("Field 'queryTimeoutMs' must be a number.");
   }
   if (raw.healthcheckTimeoutMs !== undefined && typeof raw.healthcheckTimeoutMs !== "number") {
-    throw new Error("Field 'healthcheckTimeoutMs' must be a number.");
+    errors.push("Field 'healthcheckTimeoutMs' must be a number.");
   }
   if (!Array.isArray(raw.providers) || raw.providers.length === 0) {
-    throw new Error("YAML config must define a non-empty 'providers' array.");
+    errors.push("YAML config must define a non-empty 'providers' array.");
+  } else {
+    const nameRegex = namingRegex(namingStandard);
+    raw.providers.forEach((provider, idx) => {
+      const path = `providers[${idx}]`;
+      if (!isRecord(provider)) {
+        errors.push(`${path} must be an object.`);
+        return;
+      }
+
+      pushUnknownKeysError(
+        provider,
+        [
+          "name",
+          "role",
+          "provider",
+          "dbType",
+          "enabled",
+          "ssl",
+          "connectionString",
+          "host",
+          "port",
+          "database",
+          "username",
+          "password",
+          "env"
+        ],
+        path,
+        strict,
+        errors
+      );
+
+      if (typeof provider.name !== "string" || provider.name.length === 0) {
+        errors.push(`${path}.name must be a non-empty string.`);
+      } else if (!nameRegex.test(provider.name)) {
+        errors.push(`${path}.name must follow ${namingStandard}. Received '${provider.name}'.`);
+      }
+
+      if (provider.role !== "primary" && provider.role !== "failover") {
+        errors.push(`${path}.role must be 'primary' or 'failover'.`);
+      }
+      if (typeof provider.provider !== "string" || provider.provider.length === 0) {
+        errors.push(`${path}.provider must be a non-empty string.`);
+      }
+      if (provider.dbType !== undefined && typeof provider.dbType !== "string") {
+        errors.push(`${path}.dbType must be a string.`);
+      }
+      if (provider.enabled !== undefined && typeof provider.enabled !== "boolean") {
+        errors.push(`${path}.enabled must be a boolean.`);
+      }
+      if (provider.ssl !== undefined && typeof provider.ssl !== "boolean") {
+        errors.push(`${path}.ssl must be a boolean.`);
+      }
+      if (
+        provider.connectionString !== undefined &&
+        typeof provider.connectionString !== "string"
+      ) {
+        errors.push(`${path}.connectionString must be a string.`);
+      }
+      if (provider.host !== undefined && typeof provider.host !== "string") {
+        errors.push(`${path}.host must be a string.`);
+      }
+      if (provider.port !== undefined && typeof provider.port !== "number") {
+        errors.push(`${path}.port must be a number.`);
+      }
+      if (provider.database !== undefined && typeof provider.database !== "string") {
+        errors.push(`${path}.database must be a string.`);
+      }
+      if (provider.username !== undefined && typeof provider.username !== "string") {
+        errors.push(`${path}.username must be a string.`);
+      }
+      if (provider.password !== undefined && typeof provider.password !== "string") {
+        errors.push(`${path}.password must be a string.`);
+      }
+
+      if (provider.env !== undefined) {
+        if (!isRecord(provider.env)) {
+          errors.push(`${path}.env must be an object.`);
+        } else {
+          pushUnknownKeysError(
+            provider.env,
+            ["connectionString", "host", "port", "database", "username", "password"],
+            `${path}.env`,
+            strict,
+            errors
+          );
+          for (const [envKey, envValue] of Object.entries(provider.env)) {
+            if (typeof envValue !== "string" || envValue.length === 0) {
+              errors.push(`${path}.env.${envKey} must be a non-empty string env key.`);
+            }
+          }
+        }
+      }
+    });
   }
 
-  raw.providers.forEach((provider, idx) => {
-    const path = `providers[${idx}]`;
-    if (!isRecord(provider)) {
-      throw new Error(`${path} must be an object.`);
-    }
-    assertNoUnknownKeys(
-      provider,
-      [
-        "name",
-        "role",
-        "provider",
-        "dbType",
-        "enabled",
-        "ssl",
-        "connectionString",
-        "host",
-        "port",
-        "database",
-        "username",
-        "password",
-        "env"
-      ],
-      path,
-      strict
-    );
+  if (errors.length > 0) {
+    throw new Error(`YAML schema validation failed:\n- ${errors.join("\n- ")}`);
+  }
+  return raw as unknown as YamlDBConfig;
+}
 
-    if (typeof provider.name !== "string" || provider.name.length === 0) {
-      throw new Error(`${path}.name must be a non-empty string.`);
+function validateEnvReferences(parsed: YamlDBConfig, env: EnvMap): void {
+  const missing: string[] = [];
+  parsed.providers.forEach((provider, idx) => {
+    if (!provider.env) {
+      return;
     }
-    assertNaming(provider.name, namingStandard, `${path}.name`);
-
-    if (provider.role !== "primary" && provider.role !== "failover") {
-      throw new Error(`${path}.role must be 'primary' or 'failover'.`);
-    }
-    if (typeof provider.provider !== "string" || provider.provider.length === 0) {
-      throw new Error(`${path}.provider must be a non-empty string.`);
-    }
-    if (provider.dbType !== undefined && typeof provider.dbType !== "string") {
-      throw new Error(`${path}.dbType must be a string.`);
-    }
-    if (provider.enabled !== undefined && typeof provider.enabled !== "boolean") {
-      throw new Error(`${path}.enabled must be a boolean.`);
-    }
-    if (provider.ssl !== undefined && typeof provider.ssl !== "boolean") {
-      throw new Error(`${path}.ssl must be a boolean.`);
-    }
-    if (provider.connectionString !== undefined && typeof provider.connectionString !== "string") {
-      throw new Error(`${path}.connectionString must be a string.`);
-    }
-    if (provider.host !== undefined && typeof provider.host !== "string") {
-      throw new Error(`${path}.host must be a string.`);
-    }
-    if (provider.port !== undefined && typeof provider.port !== "number") {
-      throw new Error(`${path}.port must be a number.`);
-    }
-    if (provider.database !== undefined && typeof provider.database !== "string") {
-      throw new Error(`${path}.database must be a string.`);
-    }
-    if (provider.username !== undefined && typeof provider.username !== "string") {
-      throw new Error(`${path}.username must be a string.`);
-    }
-    if (provider.password !== undefined && typeof provider.password !== "string") {
-      throw new Error(`${path}.password must be a string.`);
-    }
-
-    if (provider.env !== undefined) {
-      if (!isRecord(provider.env)) {
-        throw new Error(`${path}.env must be an object.`);
+    for (const [key, envVar] of Object.entries(provider.env)) {
+      if (!envVar) {
+        continue;
       }
-      assertNoUnknownKeys(
-        provider.env,
-        ["connectionString", "host", "port", "database", "username", "password"],
-        `${path}.env`,
-        strict
-      );
-      for (const [envKey, envValue] of Object.entries(provider.env)) {
-        if (typeof envValue !== "string" || envValue.length === 0) {
-          throw new Error(`${path}.env.${envKey} must be a non-empty string env key.`);
-        }
+      if (!env[envVar]) {
+        missing.push(`providers[${idx}].env.${key} -> ${envVar}`);
       }
     }
   });
-
-  return raw as unknown as YamlDBConfig;
+  if (missing.length > 0) {
+    throw new Error(`Missing required env vars referenced by YAML:\n- ${missing.join("\n- ")}`);
+  }
 }
 
 function resolveProvider(provider: YamlProviderConfig, env: EnvMap): CloudDBConfig {
   const envRefs = provider.env ?? {};
-
   const connectionString = pickValue(provider.connectionString, envRefs.connectionString, env);
   const host = pickValue(provider.host, envRefs.host, env);
   const port = parsePort(pickValue(provider.port, envRefs.port, env));
@@ -272,17 +302,17 @@ export async function loadDBConfigFromYaml(
   if (options.envFilePath) {
     loadDotenv({ path: options.envFilePath });
   }
+
   const env = options.env ?? process.env;
   const strict = options.strict ?? true;
   const namingStandard = options.namingStandard ?? "kebab-case";
-
   const source = await readFile(yamlPath, "utf8");
   const parsedRaw = parse(source) as unknown;
   const parsed = validateYamlConfig(parsedRaw, strict, namingStandard);
+  validateEnvReferences(parsed, env);
 
   const activeProviders = parsed.providers.filter((provider) => provider.enabled !== false);
   const primaryEntries = activeProviders.filter((provider) => provider.role === "primary");
-
   if (primaryEntries.length !== 1) {
     throw new Error(
       `YAML config must define exactly one enabled primary provider. Found ${primaryEntries.length}.`

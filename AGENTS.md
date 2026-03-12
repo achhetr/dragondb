@@ -26,9 +26,10 @@ npm run build
 ## Reliability Rules
 
 - Always attempt `primary` first.
+- Apply `primaryRetryCooldownMs` after primary failures to avoid repeated hot-loop retries.
 - On error, try `failovers` in configured order.
 - Never swallow provider failures silently.
-- Log provider attempts, failover events, and health check results.
+- Log provider attempts, failover events, health check results, and query IDs.
 - Health checks must remain non-destructive (`SELECT 1`).
 
 ## Security Rules
@@ -46,7 +47,10 @@ npm run build
 ## Validation Before Commit
 
 ```bash
+npm run lint
+npm run format:check
 npm run typecheck
 npm run build
-npm test
+npm run test:unit
+npm run test:integration
 ```

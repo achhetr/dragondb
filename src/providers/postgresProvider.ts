@@ -1,7 +1,7 @@
 import { Pool, type PoolConfig } from "pg";
-import type { CloudDBConfig } from "../types";
+import type { CloudDBConfig, DBClient } from "../types";
 
-export function createPostgresPool(cfg: CloudDBConfig, queryTimeoutMs?: number): Pool {
+export function createPostgresPool(cfg: CloudDBConfig, queryTimeoutMs?: number): DBClient {
   if (!cfg.connectionString) {
     const missing = ["host", "port", "database", "username", "password"].filter((field) => {
       const value = cfg[field as keyof CloudDBConfig];

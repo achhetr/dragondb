@@ -1,6 +1,7 @@
 # SaiyanDB DB Wrapper
 
 Cloud-agnostic DAL for Node.js with:
+
 - one API for queries and CRUD helpers
 - one primary provider and multiple ordered failovers
 - provider health checks
@@ -10,8 +11,8 @@ Cloud-agnostic DAL for Node.js with:
 
 ## Prerequisites
 
-- Node.js 25+
-- npm 11+
+- Node.js 20+ (LTS recommended: 22)
+- npm 10+
 - reachable pg instances
 
 ## Install For Local Development
@@ -58,6 +59,12 @@ await dal.close();
 - `dal.health()` returns primary and failover health snapshot.
 - `dal.close()` closes all pools.
 
+## Documentation
+
+- `docs/quickstart.md`
+- `docs/configuration.md`
+- `docs/driver-extension.md`
+
 ## Database Type Resolution
 
 - The wrapper resolves database type first, then selects a driver implementation.
@@ -68,6 +75,7 @@ await dal.close();
 ## YAML + .env Configuration (Recommended)
 
 Use YAML for non-secret topology and failover behavior:
+
 - provider name
 - cloud provider type
 - role (`primary` or `failover`)
@@ -76,11 +84,13 @@ Use YAML for non-secret topology and failover behavior:
 - naming standard for provider names (validated)
 
 Use `.env` for secrets:
+
 - DB URL/connection string
 - username/password
 - host/port overrides when needed
 
 Example files:
+
 - `config/db.config.yaml.example`
 - `.env.example`
 
@@ -114,8 +124,10 @@ registerDriver("my-future-db", (cfg) => {
 
 1. Query attempts `primary`.
 2. If primary fails, it iterates `failovers` in order.
-3. On first success, it returns result with provider execution metadata.
-4. If all fail, it throws a combined error.
+3. Primary retries are cooldown-gated to reduce repeated failures (`primaryRetryCooldownMs`).
+4. On first success, it returns result with provider execution metadata.
+5. Query metadata includes `queryId`, attempt number, and execution duration.
+6. If all fail, it throws a combined error.
 
 ## Health Checks
 
@@ -132,9 +144,12 @@ registerDriver("my-future-db", (cfg) => {
 ## Development
 
 ```bash
+npm run lint
+npm run format:check
 npm run typecheck
 npm run build
-npm test
+npm run test:unit
+npm run test:integration
 npm run example
 npm run example:failover
 npm run example:yaml
@@ -149,6 +164,10 @@ npm run example:yaml
 ## CI
 
 GitHub Actions workflow is included at `.github/workflows/ci.yml` and runs:
+
+- lint
+- format check
 - typecheck
 - build
-- unit tests
+- unit tests (Node 20/22)
+- integration tests (Postgres service)

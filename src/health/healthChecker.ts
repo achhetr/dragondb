@@ -1,14 +1,16 @@
-import type { Pool } from "pg";
-import type { CloudDBConfig, ProviderHealth } from "../types";
+import type { CloudDBConfig, DBClient, ProviderHealth } from "../types";
 
 interface HealthcheckTarget {
   config: CloudDBConfig;
-  pool: Pool;
+  pool: DBClient;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Healthcheck timed out after ${timeoutMs}ms`)), timeoutMs);
+    const timer = setTimeout(
+      () => reject(new Error(`Healthcheck timed out after ${timeoutMs}ms`)),
+      timeoutMs
+    );
     promise
       .then((value) => {
         clearTimeout(timer);
@@ -21,7 +23,10 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-export async function checkProviderHealth(target: HealthcheckTarget, timeoutMs: number): Promise<ProviderHealth> {
+export async function checkProviderHealth(
+  target: HealthcheckTarget,
+  timeoutMs: number
+): Promise<ProviderHealth> {
   const started = Date.now();
   const checkedAt = new Date().toISOString();
 

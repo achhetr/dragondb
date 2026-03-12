@@ -1,6 +1,5 @@
-import type { QueryResultRow } from "pg";
 import { ConnectionManager } from "./connection/connectionManager";
-import type { DBConfig, HealthSnapshot, QueryExecutionResult } from "./types";
+import type { DBConfig, DBRow, HealthSnapshot, QueryExecutionResult } from "./types";
 
 const IDENTIFIER_REGEX = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -17,12 +16,12 @@ function assertColumns(columns: string[]): void {
 }
 
 export interface DAL {
-  query<T extends QueryResultRow = QueryResultRow>(
+  query<T extends DBRow = DBRow>(
     sql: string,
     params?: readonly unknown[]
   ): Promise<QueryExecutionResult<T>>;
-  getById<T extends QueryResultRow = QueryResultRow>(table: string, id: string | number): Promise<T | undefined>;
-  insert<T extends QueryResultRow = QueryResultRow>(
+  getById<T extends DBRow = DBRow>(table: string, id: string | number): Promise<T | undefined>;
+  insert<T extends DBRow = DBRow>(
     table: string,
     data: Record<string, unknown>
   ): Promise<T | undefined>;
@@ -34,14 +33,14 @@ export function createDAL(config: DBConfig): DAL {
   const manager = new ConnectionManager(config);
 
   return {
-    async query<T extends QueryResultRow = QueryResultRow>(
+    async query<T extends DBRow = DBRow>(
       sql: string,
       params: readonly unknown[] = []
     ): Promise<QueryExecutionResult<T>> {
       return manager.query<T>(sql, params);
     },
 
-    async getById<T extends QueryResultRow = QueryResultRow>(
+    async getById<T extends DBRow = DBRow>(
       table: string,
       id: string | number
     ): Promise<T | undefined> {
@@ -51,7 +50,7 @@ export function createDAL(config: DBConfig): DAL {
       return response.result.rows[0];
     },
 
-    async insert<T extends QueryResultRow = QueryResultRow>(
+    async insert<T extends DBRow = DBRow>(
       table: string,
       data: Record<string, unknown>
     ): Promise<T | undefined> {

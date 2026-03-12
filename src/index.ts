@@ -10,15 +10,19 @@ export {
   listRegisteredDrivers,
   registerDriver,
   resolveDatabaseType,
+  type DriverPoolFactoryOptions,
   type DriverFactory
 } from "./drivers";
 export { defaultLogger } from "./logger";
 export type {
   CloudDBConfig,
   CloudProvider,
+  DBClient,
   DatabaseType,
   DBConfig,
+  DBQueryResult,
   DBLogger,
+  DBRow,
   HealthSnapshot,
   ProviderHealth,
   QueryExecutionMeta,
