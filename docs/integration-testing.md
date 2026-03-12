@@ -1,55 +1,63 @@
 # Integration Testing
 
-## Purpose
+Integration tests validate real PostgreSQL failover behavior using isolated databases.
 
-Integration tests validate real failover behavior with isolated Postgres targets and verify that failover log events are emitted.
-The integration suite loads provider topology from `tests/integration/fixtures/integration.db.config.yaml` using `loadDBConfigFromYaml()` to mirror production-style config resolution.
+## What this suite verifies
+
+- Query success on healthy primary provider.
+- Ordered failover path when upstream providers are down.
+- Combined error reporting when all providers fail.
+- Primary retry cooldown behavior (`primary-cooldown-skip`).
+- Failover logging events (`query-attempt`, `primary-failed`, `failover-failed`, `failover-success`).
+
+## Prerequisites
+
+- Docker and Docker Compose
+- Node.js `>=22`
+- npm `>=10`
 
 ## Environment variables
 
-Set these variables for host-based integration runs:
+For host-based integration tests:
 
 ```bash
 PRIMARY_DB_URL=postgres://postgres:postgres@localhost:55432/saiyandb_primary
 FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:55433/saiyandb_failover1,postgres://postgres:postgres@localhost:55434/saiyandb_failover2
 ```
 
-`FAILOVER_DB_URLS` is a comma-separated list; integration coverage currently expects at least two failover URLs.
+`FAILOVER_DB_URLS` must include at least two URLs for full integration coverage.
+During tests, this value is split and mapped to provider-level env keys consumed
+by YAML config (`FAILOVER_DB_URL_1`, `FAILOVER_DB_URL_2`).
 
 ## Local workflow
 
 ```bash
-# Start three integration Postgres instances
+# 1) Start primary + failover databases
 npm run integration:up
 
-# Run integration tests on your host using env vars
+# 2) Run on host
 npm run test:integration
 
-# Or run integration tests in the test-runner container
+# 3) (Alternative) run tests in Docker test-runner container
 npm run test:integration:docker
 
-# Tear down containers and volumes
+# 4) Tear down containers and volumes
 npm run integration:down
 ```
 
-You can copy defaults from `docker/integration/.env.example`.
+Copy default integration values from `docker/integration/.env.example` when needed.
 
-## What the suite validates
+## Important fixtures
 
-- Primary query success against a healthy primary provider.
-- Ordered failover sequence (`primary` -> `failover-1` -> `failover-2`) when earlier targets are unavailable.
-- Error propagation when all providers fail.
-- Primary cooldown behavior (`primary-cooldown-skip`) between consecutive queries.
-- Failover-related log events:
-  - `query-attempt`
-  - `primary-failed`
-  - `failover-failed`
-  - `failover-success`
-  - `primary-cooldown-skip`
+- Topology fixture: `tests/integration/fixtures/integration.db.config.yaml`
+- No-failover fixture: `tests/integration/fixtures/integration.db.no-failover.config.yaml`
+- Test file: `tests/integration/pg.test.ts`
 
-## CI
+The tests intentionally use unreachable addresses for some scenarios to simulate provider failure and force failover path validation.
 
-CI uses the same Docker compose topology and containerized integration run:
+## CI behavior
+
+CI runs the same Docker topology and containerized integration tests:
 
 - `npm run integration:up`
 - `npm run test:integration:docker`
