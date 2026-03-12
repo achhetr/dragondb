@@ -44,4 +44,5 @@ npm run build
 ```bash
 npm run typecheck
 npm run build
+npm test
 ```

@@ -126,6 +126,7 @@ registerDriver("my-future-db", (cfg) => {
 ```bash
 npm run typecheck
 npm run build
+npm test
 npm run example
 npm run example:failover
 ```
@@ -133,5 +134,12 @@ npm run example:failover
 ## First Commit Checklist
 
 - Confirm `.gitignore` is present.
-- Run `npm run typecheck` and `npm run build`.
+- Run `npm run typecheck`, `npm run build`, and `npm test`.
 - Review files with `git status`.
+
+## CI
+
+GitHub Actions workflow is included at `.github/workflows/ci.yml` and runs:
+- typecheck
+- build
+- unit tests
