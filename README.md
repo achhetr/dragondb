@@ -4,6 +4,8 @@ Open-source Node.js DAL wrapper that can automatically fail over from an unhealt
 
 Current database support: `pg` only.
 
+Built using a Vibe Engineering approach to iterate quickly and ship fast while keeping reliability-focused failover behavior.
+
 ## Core Behavior
 
 - Attempts `primary` first for each query.
