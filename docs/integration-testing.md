@@ -3,6 +3,7 @@
 ## Purpose
 
 Integration tests validate real failover behavior with isolated Postgres targets and verify that failover log events are emitted.
+The integration suite loads provider topology from `tests/integration/fixtures/integration.db.config.yaml` using `loadDBConfigFromYaml()` to mirror production-style config resolution.
 
 ## Environment variables
 
