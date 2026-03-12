@@ -105,6 +105,23 @@ test("query throws when all providers fail", async () => {
   await manager.close();
 });
 
+test("query throws when primary fails and no failover is configured", async () => {
+  const dbType = uniqueDbType("no-failover");
+  registerMockDriver(dbType, {
+    primary: { failQueries: true }
+  });
+
+  const manager = new ConnectionManager({
+    defaultDbType: dbType,
+    logger: makeLogger(),
+    primary: makeProvider("primary"),
+    failovers: []
+  });
+
+  await assert.rejects(() => manager.query("SELECT * FROM users"), /All providers failed/);
+  await manager.close();
+});
+
 test("checkAll marks overallHealthy when any provider is healthy", async () => {
   const dbType = uniqueDbType("health");
   registerMockDriver(dbType, {

@@ -1,0 +1,58 @@
+services:
+  primary-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: saiyandb_primary
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saiyandb_primary"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  failover-1-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: saiyandb_failover1
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saiyandb_failover1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  failover-2-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: saiyandb_failover2
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saiyandb_failover2"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  test-runner:
+    build:
+      context: ../..
+      dockerfile: docker/integration/Dockerfile.test
+    depends_on:
+      primary-db:
+        condition: service_healthy
+      failover-1-db:
+        condition: service_healthy
+      failover-2-db:
+        condition: service_healthy
+    environment:
+      PRIMARY_DB_URL: postgres://postgres:postgres@primary-db:5432/saiyandb_primary
+      FAILOVER_DB_URLS: postgres://postgres:postgres@failover-1-db:5432/saiyandb_failover1,postgres://postgres:postgres@failover-2-db:5432/saiyandb_failover2
+    command: npm run test:integration
