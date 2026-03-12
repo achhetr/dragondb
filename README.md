@@ -10,8 +10,8 @@ Cloud-agnostic DAL for Node.js with:
 
 ## Prerequisites
 
-- Node.js 18+
-- npm 9+
+- Node.js 25+
+- npm 11+
 - reachable pg instances
 
 ## Install For Local Development
