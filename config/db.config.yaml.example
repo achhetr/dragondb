@@ -4,6 +4,7 @@ healthcheckTimeoutMs: 3000
 
 failover:
   enabled: true
+  connectionStrings: DB_FAILOVER_URLS
 
 providers:
   - name: aws-primary
@@ -19,13 +20,9 @@ providers:
     provider: gcp
     dbType: pg
     enabled: true
-    env:
-      connectionString: DB_FAILOVER_1_URL
 
   - name: azure-failover-2
     role: failover
     provider: azure
     dbType: pg
     enabled: true
-    env:
-      connectionString: DB_FAILOVER_2_URL

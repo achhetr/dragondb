@@ -16,6 +16,7 @@ Top-level fields:
 - `queryTimeoutMs` (number, optional)
 - `healthcheckTimeoutMs` (number, optional)
 - `failover.enabled` (boolean, optional; defaults to `true`)
+- `failover.connectionStrings` (string env key, optional; comma-separated failover URLs)
 - `providers` (required, non-empty array)
 
 Each provider:
@@ -26,7 +27,7 @@ Each provider:
 - `dbType` (optional string; defaults to `pg`)
 - `enabled` (optional boolean; defaults to `true`)
 - `ssl` (optional boolean)
-- `env.connectionString` (required string env key)
+- `env.connectionString` (required for `primary`; optional for `failover` when `failover.connectionStrings` is used)
 
 ## Example configuration
 
@@ -37,6 +38,7 @@ healthcheckTimeoutMs: 3000
 
 failover:
   enabled: true
+  connectionStrings: FAILOVER_DB_URLS
 
 providers:
   - name: primary-real
@@ -52,14 +54,15 @@ providers:
     provider: gcp
     dbType: pg
     enabled: true
-    env:
-      connectionString: FAILOVER_DB_URL_1
 ```
 
 ```bash
 PRIMARY_DB_URL=postgres://postgres:postgres@localhost:5432/appdb
-FAILOVER_DB_URL_1=postgres://postgres:postgres@localhost:5433/appdb
+FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:5433/appdb,postgres://postgres:postgres@localhost:5434/appdb
 ```
+
+When `failover.connectionStrings` is configured, enabled failover providers consume
+entries in list order.
 
 ## Strict validation
 
@@ -105,5 +108,6 @@ const dal = await createDALFromYaml("./config/db.config.yaml", {
 
 - Queries try `primary` first.
 - If primary fails, failovers are attempted in listed order.
+- If `failover.connectionStrings` is set, failover connection strings are assigned by failover order.
 - Primary retries are temporarily skipped after a failure based on `primaryRetryCooldownMs`.
 - If `failover.enabled: false`, only primary is used.

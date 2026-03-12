@@ -171,3 +171,89 @@ providers:
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("failover providers can resolve from failover.connectionStrings list by order", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "saiyandb-yaml-test-"));
+  const yamlPath = join(dir, "db.yaml");
+
+  try {
+    const yaml = `
+defaultDbType: pg
+failover:
+  enabled: true
+  connectionStrings: FAILOVER_URLS
+providers:
+  - name: primary-db
+    role: primary
+    provider: aws
+    env:
+      connectionString: PRIMARY_URL
+  - name: failover-one
+    role: failover
+    provider: gcp
+  - name: failover-two
+    role: failover
+    provider: azure
+`;
+    await writeFile(yamlPath, yaml, "utf8");
+
+    const config = await loadDBConfigFromYaml(yamlPath, {
+      env: {
+        PRIMARY_URL: "postgres://postgres:postgres@localhost:5432/appdb",
+        FAILOVER_URLS:
+          "postgres://postgres:postgres@localhost:5433/appdb,postgres://postgres:postgres@localhost:5434/appdb"
+      }
+    });
+
+    assert.equal(
+      config.failovers?.[0]?.connectionString,
+      "postgres://postgres:postgres@localhost:5433/appdb"
+    );
+    assert.equal(
+      config.failovers?.[1]?.connectionString,
+      "postgres://postgres:postgres@localhost:5434/appdb"
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("failover.connectionStrings must provide enough values for enabled failovers", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "saiyandb-yaml-test-"));
+  const yamlPath = join(dir, "db.yaml");
+
+  try {
+    const yaml = `
+defaultDbType: pg
+failover:
+  enabled: true
+  connectionStrings: FAILOVER_URLS
+providers:
+  - name: primary-db
+    role: primary
+    provider: aws
+    env:
+      connectionString: PRIMARY_URL
+  - name: failover-one
+    role: failover
+    provider: gcp
+  - name: failover-two
+    role: failover
+    provider: azure
+`;
+    await writeFile(yamlPath, yaml, "utf8");
+
+    await assert.rejects(
+      () =>
+        loadDBConfigFromYaml(yamlPath, {
+          env: {
+            PRIMARY_URL: "postgres://postgres:postgres@localhost:5432/appdb",
+            FAILOVER_URLS: "postgres://postgres:postgres@localhost:5433/appdb"
+          }
+        }),
+      /Not enough failover connection strings/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

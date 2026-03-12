@@ -7,6 +7,7 @@ type EnvMap = Record<string, string | undefined>;
 
 interface YamlFailoverConfig {
   enabled?: boolean;
+  connectionStrings?: string;
 }
 
 interface YamlProviderEnvRefs {
@@ -89,6 +90,16 @@ function pushUnknownKeysError(
   }
 }
 
+function splitConnectionStrings(raw: string | undefined): string[] {
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 function validateYamlConfig(
   raw: unknown,
   strict: boolean,
@@ -111,9 +122,22 @@ function validateYamlConfig(
     if (!isRecord(raw.failover)) {
       errors.push("Field 'failover' must be an object.");
     } else {
-      pushUnknownKeysError(raw.failover, ["enabled"], "failover", strict, errors);
+      pushUnknownKeysError(
+        raw.failover,
+        ["enabled", "connectionStrings"],
+        "failover",
+        strict,
+        errors
+      );
       if (raw.failover.enabled !== undefined && typeof raw.failover.enabled !== "boolean") {
         errors.push("Field 'failover.enabled' must be a boolean.");
+      }
+      if (
+        raw.failover.connectionStrings !== undefined &&
+        (typeof raw.failover.connectionStrings !== "string" ||
+          raw.failover.connectionStrings.length === 0)
+      ) {
+        errors.push("Field 'failover.connectionStrings' must be a non-empty string env key.");
       }
     }
   }
@@ -178,12 +202,25 @@ function validateYamlConfig(
             }
           }
         }
-      } else {
-        errors.push(`${path}.env is required and must include connectionString.`);
       }
 
-      if (isRecord(provider.env) && !provider.env.connectionString) {
-        errors.push(`${path}.env.connectionString is required.`);
+      const hasProviderConnectionRef =
+        isRecord(provider.env) &&
+        typeof provider.env.connectionString === "string" &&
+        provider.env.connectionString.length > 0;
+      const hasFailoverListRef =
+        provider.role === "failover" &&
+        isRecord(raw.failover) &&
+        typeof raw.failover.connectionStrings === "string" &&
+        raw.failover.connectionStrings.length > 0;
+
+      if (provider.role === "primary" && !hasProviderConnectionRef) {
+        errors.push(`${path}.env.connectionString is required for primary providers.`);
+      }
+      if (provider.role === "failover" && !hasProviderConnectionRef && !hasFailoverListRef) {
+        errors.push(
+          `${path} must define env.connectionString or configure failover.connectionStrings.`
+        );
       }
     });
   }
@@ -196,8 +233,14 @@ function validateYamlConfig(
 
 function validateEnvReferences(parsed: YamlDBConfig, env: EnvMap): void {
   const missing: string[] = [];
+  const failoverListEnvKey = parsed.failover?.connectionStrings;
+  const hasFailoverList = Boolean(failoverListEnvKey);
+
   parsed.providers.forEach((provider, idx) => {
-    if (!provider.env) {
+    if (!provider.env?.connectionString) {
+      if (provider.role === "failover" && hasFailoverList) {
+        return;
+      }
       return;
     }
     for (const [key, envVar] of Object.entries(provider.env)) {
@@ -209,14 +252,24 @@ function validateEnvReferences(parsed: YamlDBConfig, env: EnvMap): void {
       }
     }
   });
+
+  if (failoverListEnvKey && !env[failoverListEnvKey]) {
+    missing.push(`failover.connectionStrings -> ${failoverListEnvKey}`);
+  }
+
   if (missing.length > 0) {
     throw new Error(`Missing required env vars referenced by YAML:\n- ${missing.join("\n- ")}`);
   }
 }
 
-function resolveProvider(provider: YamlProviderConfig, env: EnvMap): CloudDBConfig {
+function resolveProvider(
+  provider: YamlProviderConfig,
+  env: EnvMap,
+  fallbackConnectionString?: string
+): CloudDBConfig {
   const envRefs = provider.env ?? {};
-  const connectionString = pickValue<string>(undefined, envRefs.connectionString, env);
+  const connectionString =
+    pickValue<string>(undefined, envRefs.connectionString, env) ?? fallbackConnectionString;
 
   return {
     name: provider.name,
@@ -255,12 +308,25 @@ export async function loadDBConfigFromYaml(
   const failoverEntries = failoverEnabled
     ? activeProviders.filter((provider) => provider.role === "failover")
     : [];
+  const failoverConnectionStrings = splitConnectionStrings(
+    parsed.failover?.connectionStrings ? env[parsed.failover.connectionStrings] : undefined
+  );
+  if (
+    failoverConnectionStrings.length > 0 &&
+    failoverConnectionStrings.length < failoverEntries.length
+  ) {
+    throw new Error(
+      `Not enough failover connection strings. Expected ${failoverEntries.length}, received ${failoverConnectionStrings.length}.`
+    );
+  }
 
   return {
     defaultDbType: parsed.defaultDbType ?? "pg",
     queryTimeoutMs: parsed.queryTimeoutMs,
     healthcheckTimeoutMs: parsed.healthcheckTimeoutMs,
     primary: resolveProvider(primaryEntries[0], env),
-    failovers: failoverEntries.map((provider) => resolveProvider(provider, env))
+    failovers: failoverEntries.map((provider, idx) =>
+      resolveProvider(provider, env, failoverConnectionStrings[idx])
+    )
   };
 }

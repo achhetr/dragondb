@@ -32,6 +32,7 @@ healthcheckTimeoutMs: 3000
 
 failover:
   enabled: true
+  connectionStrings: FAILOVER_DB_URLS
 
 providers:
   - name: primary-real
@@ -45,29 +46,22 @@ providers:
     role: failover
     provider: gcp
     dbType: pg
-    env:
-      connectionString: FAILOVER_DB_URL_1
 
   - name: failover-2-real
     role: failover
     provider: azure
     dbType: pg
-    env:
-      connectionString: FAILOVER_DB_URL_2
 ```
 
 Create `.env`:
 
 ```bash
 PRIMARY_DB_URL=postgres://postgres:postgres@localhost:5432/appdb
-FAILOVER_DB_URL_1=postgres://postgres:postgres@localhost:5433/appdb
-FAILOVER_DB_URL_2=postgres://postgres:postgres@localhost:5434/appdb
+FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:5433/appdb,postgres://postgres:postgres@localhost:5434/appdb
 ```
 
-Use one env var per failover in app usage because each provider maps to its own
-`env.connectionString` key in YAML. The comma-separated `FAILOVER_DB_URLS` format
-is only used by integration tests, where values are split and remapped to
-`FAILOVER_DB_URL_1` and `FAILOVER_DB_URL_2`.
+Failovers are matched to this list by provider order in YAML. In this example:
+`failover-1-real` uses the first URL and `failover-2-real` uses the second URL.
 
 ## 3) Initialize and query
 

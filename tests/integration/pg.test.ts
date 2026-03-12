@@ -48,18 +48,20 @@ function createTestLogger(entries: LogEntry[]): DBLogger {
 
 interface IntegrationConfigOverrides {
   primary?: string;
-  failover1?: string;
-  failover2?: string;
+  failovers?: string[];
   logger?: DBLogger;
   primaryRetryCooldownMs?: number;
 }
 
 async function createDalFromYaml(overrides: IntegrationConfigOverrides = {}) {
+  const activeFailovers = overrides.failovers ?? [
+    failoverOneUrl as string,
+    failoverTwoUrl as string
+  ];
   return createDALFromYaml(yamlConfigPath, {
     env: {
       PRIMARY_DB_URL: overrides.primary ?? (primaryUrl as string),
-      FAILOVER_DB_URL_1: overrides.failover1 ?? (failoverOneUrl as string),
-      FAILOVER_DB_URL_2: overrides.failover2 ?? (failoverTwoUrl as string)
+      FAILOVER_DB_URLS: activeFailovers.join(",")
     },
     logger: overrides.logger,
     primaryRetryCooldownMs: overrides.primaryRetryCooldownMs ?? 5_000
@@ -93,7 +95,7 @@ if (missingEnv.length > 0) {
     const dal = await createDalFromYaml({
       logger: createTestLogger(entries),
       primary: unreachablePrimaryUrl,
-      failover1: unreachableFailoverOneUrl
+      failovers: [unreachableFailoverOneUrl, failoverTwoUrl as string]
     });
     const response = await dal.query("SELECT 1 as up");
     assert.equal(response.result.rows[0]?.up, 1);
@@ -125,8 +127,7 @@ if (missingEnv.length > 0) {
     const dal = await createDalFromYaml({
       logger: createTestLogger(entries),
       primary: unreachablePrimaryUrl,
-      failover1: unreachableFailoverOneUrl,
-      failover2: unreachableFailoverTwoUrl
+      failovers: [unreachableFailoverOneUrl, unreachableFailoverTwoUrl]
     });
     await assert.rejects(
       () => dal.query("SELECT 1 as up"),

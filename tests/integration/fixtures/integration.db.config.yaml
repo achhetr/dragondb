@@ -4,6 +4,7 @@ healthcheckTimeoutMs: 3000
 
 failover:
   enabled: true
+  connectionStrings: FAILOVER_DB_URLS
 
 providers:
   - name: primary-real
@@ -18,13 +19,9 @@ providers:
     provider: gcp
     dbType: pg
     enabled: true
-    env:
-      connectionString: FAILOVER_DB_URL_1
 
   - name: failover-2-real
     role: failover
     provider: azure
     dbType: pg
     enabled: true
-    env:
-      connectionString: FAILOVER_DB_URL_2

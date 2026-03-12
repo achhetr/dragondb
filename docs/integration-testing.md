@@ -26,8 +26,7 @@ FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:55433/saiyandb_failover1
 ```
 
 `FAILOVER_DB_URLS` must include at least two URLs for full integration coverage.
-During tests, this value is split and mapped to provider-level env keys consumed
-by YAML config (`FAILOVER_DB_URL_1`, `FAILOVER_DB_URL_2`).
+Failover providers consume this list in YAML failover order.
 
 ## Local workflow
 
