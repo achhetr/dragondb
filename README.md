@@ -1,37 +1,57 @@
 # SaiyanDB
 
-Open-source Node.js DAL wrapper that can automatically fail over from an unhealthy primary database to ordered failover databases.
+Cloud-agnostic Node.js DAL with deterministic PostgreSQL failover.
 
-Current database support: `pg` only.
+SaiyanDB keeps query execution predictable when a primary provider degrades by
+attempting providers in a strict order and returning structured metadata for each
+successful execution.
 
-Built using a Vibe Engineering approach to iterate quickly and ship fast while keeping reliability-focused failover behavior.
+## Table of Contents
 
-## Core Behavior
+- [At a Glance](#at-a-glance)
+- [Why SaiyanDB](#why-saiyandb)
+- [Reliability Guarantees](#reliability-guarantees)
+- [Known Limits](#known-limits)
+- [Installation](#installation)
+- [Quick Usage](#quick-usage)
+- [API Surface](#api-surface)
+- [Operational Workflows](#operational-workflows)
+- [Documentation](#documentation)
+- [License](#license)
 
-- Attempts `primary` first for each query.
-- If `primary` fails, tries `failovers` in configured order.
-- Applies `primaryRetryCooldownMs` after primary failures to avoid immediate hot-loop retries.
-- Returns query result plus execution metadata (`queryId`, provider used, duration, attempt).
-- Throws a combined error if all providers fail.
+## At a Glance
 
-## Requirements
+- **Database support:** PostgreSQL (`pg`) only
+- **Runtime:** Node.js `>=22`, npm `>=10`
+- **Config model:** YAML topology + `.env` secrets
+- **Execution model:** primary-first, ordered failover fallback
+- **Health model:** non-destructive provider checks (`SELECT 1`)
+- **Current scope:** single-database-family DAL focused on reliability behavior
 
-- Node.js `>=22`
-- npm `>=10`
-- Reachable PostgreSQL instances for local/integration testing
+## Why SaiyanDB
+
+- Deterministic failover path: primary first, then enabled failovers in order
+- Cooldown protection via `primaryRetryCooldownMs` to avoid hot-loop retries
+- Strict config validation (unknown keys, missing env references, invalid shape)
+- Query execution metadata (`queryId`, provider, duration, attempt)
+- Small, typed API surface that is easy to audit and test
+
+## Reliability Guarantees
+
+- Every query attempts the configured primary provider first.
+- On primary failure, failovers are attempted in configured order.
+- Provider failures are not swallowed; all-provider failures throw a combined error.
+- Health checks remain non-destructive and provider-scoped.
+
+## Known Limits
+
+- Only PostgreSQL is supported today.
+- `getById` assumes an `id` column in the target table.
+- `insert` and `getById` validate table/column identifiers and are intended for
+  trusted schema names.
+- This library does not replace migrations, ORM modeling, or access-control policy.
 
 ## Installation
-
-### Option A: Use from source
-
-```bash
-git clone https://github.com/akashpaudel/saiyandb.git
-cd saiyandb
-npm install
-npm run build
-```
-
-### Option B: Install from npm
 
 ```bash
 npm install @akashbro/saiyandb
@@ -39,50 +59,69 @@ npm install @akashbro/saiyandb
 
 ## Quick Usage
 
+### Happy path (YAML + `.env`)
+
 ```ts
 import { createDALFromYaml } from "@akashbro/saiyandb";
 
 const dal = await createDALFromYaml("./config/db.config.yaml", {
   envFilePath: ".env",
   strict: true,
-  namingStandard: "kebab-case"
+  namingStandard: "kebab-case",
+  primaryRetryCooldownMs: 5_000
 });
 
 const health = await dal.health();
-console.log(health.overallHealthy);
+console.log("Overall healthy:", health.overallHealthy);
 
+const created = await dal.insert("users", { name: "Goku", email: "goku@example.com" });
+const user = await dal.getById("users", created?.id as number);
 const response = await dal.query("SELECT now()");
-console.log(response.meta.providerName);
-console.log(response.result.rows);
+
+console.log("Provider:", response.meta.providerName);
+console.log("User:", user);
 
 await dal.close();
 ```
 
+### Production knobs (logger + retry tuning)
+
+```ts
+import { createDALFromYaml } from "@akashbro/saiyandb";
+
+const dal = await createDALFromYaml("./config/db.config.yaml", {
+  envFilePath: ".env",
+  strict: true,
+  primaryRetryCooldownMs: 15_000,
+  logger: {
+    debug: (message, meta) => console.debug(message, meta),
+    info: (message, meta) => console.info(message, meta),
+    warn: (message, meta) => console.warn(message, meta),
+    error: (message, meta) => console.error(message, meta)
+  }
+});
+```
+
 ## API Surface
 
-- `createDALFromYaml(path, options?)`: create DAL from YAML topology + env references.
-- `dal.query(sql, params?)`: execute SQL with automatic failover.
-- `dal.getById(table, id)`: helper for `SELECT ... WHERE id = $1 LIMIT 1`.
-- `dal.insert(table, data)`: helper for `INSERT ... RETURNING *`.
-- `dal.health()`: health snapshot for primary + failovers.
-- `dal.close()`: close all database pools.
+- `createDALFromYaml(path, options?)`: create DAL from YAML topology + env references
+- `dal.query(sql, params?)`: execute SQL with automatic failover
+- `dal.getById(table, id)`: helper for `SELECT ... WHERE id = $1 LIMIT 1`
+- `dal.insert(table, data)`: helper for `INSERT ... RETURNING *`
+- `dal.health()`: health snapshot for primary and failovers
+- `dal.close()`: close all database pools
 
-## Documentation
+## Operational Workflows
 
-- `docs/quickstart.md`
-- `docs/configuration.md`
-- `docs/integration-testing.md`
-- `CONTRIBUTING.md`
-
-## Project readiness check
+### Local quality gate
 
 ```bash
 npm run verify
 ```
 
-`verify` runs lint, formatting checks, type checks, build, and unit tests in one command.
+Runs lint, format check, typecheck, build, and unit tests.
 
-## Integration Tests (Docker)
+### Integration tests (Docker)
 
 ```bash
 npm run integration:up
@@ -90,23 +129,10 @@ npm run test:integration:docker
 npm run integration:down
 ```
 
-Integration uses host ports `56432-56434`, while playground uses `55432-55434`,
-so both can run in parallel without port collisions.
-If you changed ports locally and see bind errors, stop playground DB containers first:
-`cd playground && npm run db:down`.
+Integration uses host ports `56432-56434`; playground uses `55432-55434`, so both
+stacks can run in parallel without collisions.
 
-## Playground (published package)
-
-Use the standalone playground in `playground` to test the latest published
-`@akashbro/saiyandb` against multiple Postgres providers.
-
-The playground uses one entrypoint (`run.ts`) that:
-
-- runs health checks for primary and failovers
-- executes a sample query (`SELECT 1 as ok`)
-- prints provider-level logs, selected provider, and returned rows
-
-From the repo root:
+### Playground (published package validation)
 
 ```bash
 cd playground
@@ -115,37 +141,17 @@ npm run start
 npm run db:down
 ```
 
-Useful playground commands (inside `playground`):
+For full workflow details, see [`playground/README.md`](playground/README.md).
+
+### Versioning and publishing
 
 ```bash
-npm run test
-npm run db:up
-npm run db:down
-```
-
-To simulate failover behavior:
-
-```bash
-docker compose -f docker-compose.yml stop primary-db
-npm run test
-docker compose -f docker-compose.yml start primary-db
-```
-
-See `playground/README.md` for complete workflow and local tarball testing.
-
-## Versioning and publishing
-
-Use semantic versioning with the release script:
-
-```bash
-# one command: determine bump from last commit and publish
+# determine bump from latest commit and publish
 npm run release:auto
 
 # dry-run variant
 npm run release:auto:dry-run
 ```
-
-For CI pipelines, call `./scripts/release.sh release` directly.
 
 `release:auto` follows Conventional Commits on the latest commit:
 
@@ -153,10 +159,19 @@ For CI pipelines, call `./scripts/release.sh release` directly.
 - `minor`: commit type is `feat`
 - `patch`: default fallback
 
-`release:auto` also creates a git commit for version files:
+The release flow commits version file updates, including:
 
 - `package.json`
 - `package-lock.json`
+- `playground/package.json`
+- `playground/package-lock.json`
+
+## Documentation
+
+- [`docs/quickstart.md`](docs/quickstart.md): end-to-end setup from config files to first query
+- [`docs/configuration.md`](docs/configuration.md): YAML schema, strict validation, naming, and security guidance
+- [`docs/integration-testing.md`](docs/integration-testing.md): Docker topology, host env vars, and failover test workflow
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): development expectations, testing, and PR workflow
 
 ## License
 
