@@ -1,6 +1,6 @@
 {
   "name": "@akashbro/saiyandb",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Cloud-agnostic DB DAL for Node.js with pg support, failover, and YAML+env config.",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
