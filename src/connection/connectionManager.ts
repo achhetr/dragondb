@@ -1,6 +1,6 @@
 import { createDriverPool, resolveDatabaseType } from "../drivers";
 import { checkProviderHealth } from "../health/healthChecker";
-import { defaultLogger, redactSensitiveText } from "../logger";
+import { defaultLogger, getSafeErrorMessage } from "../logger";
 import type {
   CloudDBConfig,
   DBClient,
@@ -136,7 +136,7 @@ export class ConnectionManager {
         this.primaryFailedAtMs = undefined;
         return response;
       } catch (error) {
-        const message = redactSensitiveText(error instanceof Error ? error.message : String(error));
+        const message = getSafeErrorMessage(error);
         errors.push(`primary(${this.primary.config.name}): ${message}`);
         this.primaryFailedAtMs = Date.now();
         this.logger.warn("Primary provider failed, attempting failovers", {
@@ -169,7 +169,7 @@ export class ConnectionManager {
         });
         return response;
       } catch (error) {
-        const message = redactSensitiveText(error instanceof Error ? error.message : String(error));
+        const message = getSafeErrorMessage(error);
         errors.push(`failover(${failover.config.name}): ${message}`);
         this.logger.warn("Failover provider failed", {
           event: "failover-failed",

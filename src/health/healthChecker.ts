@@ -1,5 +1,5 @@
 import type { CloudDBConfig, DBClient, ProviderHealth } from "../types";
-import { redactSensitiveText } from "../logger";
+import { getSafeErrorMessage } from "../logger";
 
 interface HealthcheckTarget {
   config: CloudDBConfig;
@@ -47,7 +47,7 @@ export async function checkProviderHealth(
       healthy: false,
       latencyMs: Date.now() - started,
       checkedAt,
-      lastError: redactSensitiveText(error instanceof Error ? error.message : String(error))
+      lastError: getSafeErrorMessage(error)
     };
   }
 }

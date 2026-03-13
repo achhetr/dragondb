@@ -25,7 +25,11 @@ npm run start
 npm run db:down
 ```
 
-`start` brings up all Postgres containers and runs the basic example.
+`start` brings up all Postgres containers and runs a single playground test file (`run.ts`) that:
+
+- checks health of primary and failovers
+- executes a query
+- prints provider selection and result logs
 
 ## Start multiple Postgres providers
 
@@ -39,25 +43,20 @@ This starts:
 - `failover-1-db` on `localhost:55433`
 - `failover-2-db` on `localhost:55434`
 
-## Run examples
+## Run playground test
 
 ```bash
-npm run example:basic
-npm run example:yaml
-npm run example:failover
+npm run test
 ```
 
-## Test all states
+## Simulate failover
+
+Use service names from Docker Compose:
 
 ```bash
-# healthy primary path
-npm run example:basic
-
-# same config path via explicit yaml example
-npm run example:yaml
-
-# failover-focused output path
-npm run example:failover
+docker compose -f docker-compose.yml stop primary-db
+npm run test
+docker compose -f docker-compose.yml start primary-db
 ```
 
 ## Test local library changes
@@ -73,23 +72,8 @@ npm pack
 cd playground
 npm install ../akashbro-saiyandb-$(node -p "require('../package.json').version").tgz
 
-# run an example
-npm run example:basic
-```
-
-## Simulate failover
-
-In another terminal, stop primary and run the failover example:
-
-```bash
-docker stop primary-db
-npm run example:failover
-```
-
-Then bring containers back up:
-
-```bash
-npm run db:up
+# run playground test
+npm run test
 ```
 
 ## Cleanup

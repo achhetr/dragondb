@@ -5,14 +5,15 @@
   "description": "Playground app for @akashbro/saiyandb using multiple Postgres providers.",
   "scripts": {
     "init": "npm install && (test -f .env || cp .env.example .env)",
-    "start": "npm run db:up && npm run example:basic",
+    "start": "npm run db:up && npm run test",
     "db:up": "docker compose -f ./docker-compose.yml up -d primary-db failover-1-db failover-2-db",
     "db:down": "docker compose -f ./docker-compose.yml down -v",
-    "example:basic": "node basic.mjs",
-    "example:yaml": "node from-yaml.mjs",
-    "example:failover": "node failover-simulated.mjs"
+    "test": "tsx run.ts"
   },
   "dependencies": {
-    "@akashbro/saiyandb": "latest"
+    "@akashbro/saiyandb": "^0.1.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5"
   }
 }

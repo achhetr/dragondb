@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { redactSensitiveText, sanitizeMeta } from "../src/logger";
+import { getSafeErrorMessage, redactSensitiveText, sanitizeMeta } from "../src/logger";
 
 test("redactSensitiveText redacts credentials and token-like values", () => {
   const input =
@@ -32,4 +32,14 @@ test("sanitizeMeta redacts blocked keys recursively and sanitizes text values", 
     "[REDACTED]"
   );
   assert.equal((sanitized?.items as unknown[])[1], "postgres://u:[REDACTED]@localhost/db");
+});
+
+test("getSafeErrorMessage falls back when error message is empty", () => {
+  const coded = new Error("");
+  (coded as Error & { code?: string }).code = "ECONNREFUSED";
+  assert.equal(getSafeErrorMessage(coded), "Error (ECONNREFUSED)");
+
+  const unnamed = new Error("");
+  unnamed.name = "";
+  assert.equal(getSafeErrorMessage(unnamed), "Unknown error");
 });

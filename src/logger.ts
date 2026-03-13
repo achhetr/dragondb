@@ -15,6 +15,27 @@ export function redactSensitiveText(input: string): string {
     .replace(/((?:password|token|secret)\s*:\s*)([^,\s;}]+)/gi, "$1[REDACTED]");
 }
 
+export function getSafeErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const redactedMessage = redactSensitiveText(error.message ?? "").trim();
+    if (redactedMessage.length > 0) {
+      return redactedMessage;
+    }
+
+    const errorWithCode = error as Error & { code?: unknown };
+    if (typeof errorWithCode.code === "string" && errorWithCode.code.trim().length > 0) {
+      return `${error.name || "Error"} (${errorWithCode.code.trim()})`;
+    }
+    if (error.name && error.name.trim().length > 0) {
+      return error.name.trim();
+    }
+    return "Unknown error";
+  }
+
+  const serialized = redactSensitiveText(String(error ?? "")).trim();
+  return serialized.length > 0 ? serialized : "Unknown error";
+}
+
 function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
   if (typeof value === "string") {
     return redactSensitiveText(value);
