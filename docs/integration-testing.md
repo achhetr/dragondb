@@ -33,6 +33,9 @@ Failover providers consume this list in YAML failover order.
 ## Local workflow
 
 ```bash
+# optional baseline check (no Docker required)
+npm run verify
+
 # 1) Start primary + failover databases
 npm run integration:up
 

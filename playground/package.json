@@ -4,8 +4,8 @@
   "type": "module",
   "description": "Playground app for @akashbro/saiyandb using multiple Postgres providers.",
   "scripts": {
-    "setup": "npm install",
-    "start": "npm install && (test -f .env || cp .env.example .env) && npm run db:up && npm run example:basic",
+    "init": "npm install && (test -f .env || cp .env.example .env)",
+    "start": "npm run db:up && npm run example:basic",
     "db:up": "docker compose -f ./docker-compose.yml up -d primary-db failover-1-db failover-2-db",
     "db:down": "docker compose -f ./docker-compose.yml down -v",
     "example:basic": "node basic.mjs",

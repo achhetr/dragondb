@@ -31,7 +31,7 @@ npm install
 npm run build
 ```
 
-### Option B: Use as a Git dependency
+### Option B: Install from npm
 
 ```bash
 npm install @akashbro/saiyandb
@@ -74,16 +74,13 @@ await dal.close();
 - `docs/integration-testing.md`
 - `CONTRIBUTING.md`
 
-## Local Validation
+## Project readiness check
 
 ```bash
-npm run lint
-npm run format:check
-npm run typecheck
-npm run build
-npm run test:unit
-npm run test:integration
+npm run verify
 ```
+
+`verify` runs lint, formatting checks, type checks, build, and unit tests in one command.
 
 ## Integration Tests (Docker)
 
@@ -93,17 +90,16 @@ npm run test:integration:docker
 npm run integration:down
 ```
 
-## Published package playground
+## Playground (published package)
 
 Use the standalone playground in `playground` to test the latest published
 `@akashbro/saiyandb` against multiple Postgres providers.
 
 ```bash
-# single command: install deps, create .env if missing, start DBs, run basic example
-npm run playground:start
-
-# cleanup command
-npm run playground:clean
+cd playground
+npm run init
+npm run start
+npm run db:down
 ```
 
 See `playground/README.md` for full instructions.

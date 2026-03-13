@@ -21,6 +21,12 @@ Or:
 npm install @akashbro/saiyandb
 ```
 
+If you are working from source and want to quickly verify local readiness:
+
+```bash
+npm run verify
+```
+
 ## 2) Create config files
 
 Create `config/db.config.yaml`:

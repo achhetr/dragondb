@@ -28,9 +28,8 @@
     "integration:down": "docker compose -f docker/integration/docker-compose.yml down -v",
     "test:integration:docker": "docker compose -f docker/integration/docker-compose.yml run --rm --build test-runner",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "playground:start": "npm --prefix playground run start",
-    "playground:clean": "npm --prefix playground run db:down",
-    "prepublishOnly": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:unit",
+    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:unit",
+    "prepublishOnly": "npm run verify",
     "release:auto": "./scripts/release.sh release",
     "release:auto:dry-run": "./scripts/release.sh release --dry-run"
   },

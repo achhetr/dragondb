@@ -20,15 +20,10 @@ npm install
 Recommended validation before opening a PR:
 
 ```bash
-npm run lint
-npm run format:check
-npm run typecheck
-npm run build
-npm run test:unit
-npm run test:integration
+npm run verify
 ```
 
-If you use Docker integration tests:
+Run integration tests separately when you modify failover behavior:
 
 ```bash
 npm run integration:up
