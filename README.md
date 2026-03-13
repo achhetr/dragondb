@@ -9,6 +9,7 @@ successful execution.
 ## Table of Contents
 
 - [At a Glance](#at-a-glance)
+- [Demo](#demo)
 - [Why SaiyanDB](#why-saiyandb)
 - [Reliability Guarantees](#reliability-guarantees)
 - [Known Limits](#known-limits)
@@ -27,6 +28,19 @@ successful execution.
 - **Execution model:** primary-first, ordered failover fallback
 - **Health model:** non-destructive provider checks (`SELECT 1`)
 - **Current scope:** single-database-family DAL focused on reliability behavior
+
+## Demo
+
+Watch automatic failover in action (primary stop + query succeeds on failover):
+
+[![Watch the demo on YouTube](https://img.youtube.com/vi/lelEXtfIOUE/maxresdefault.jpg)](https://youtube.com/shorts/lelEXtfIOUE)
+
+- [Watch on YouTube](https://youtube.com/shorts/lelEXtfIOUE)
+
+Caption: Primary is stopped, query retries in configured order, and succeeds on failover.
+
+Note: Use a public YouTube watch URL for README previews. YouTube Studio edit links are
+account-specific and do not render for public viewers.
 
 ## Why SaiyanDB
 
