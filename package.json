@@ -31,7 +31,9 @@
     "example": "tsx examples/basic.ts",
     "example:failover": "tsx examples/failover-simulated.ts",
     "example:yaml": "tsx examples/from-yaml.ts",
-    "prepublishOnly": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:unit"
+    "prepublishOnly": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:unit",
+    "release:auto": "./scripts/release.sh release",
+    "release:auto:dry-run": "./scripts/release.sh release --dry-run"
   },
   "keywords": [
     "postgres",
@@ -54,8 +56,7 @@
     "url": "https://github.com/akashpaudel/saiyandb/issues"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "engines": {
     "node": ">=22.0.0",

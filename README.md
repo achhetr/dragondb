@@ -93,6 +93,31 @@ npm run test:integration:docker
 npm run integration:down
 ```
 
+## Versioning and publishing
+
+Use semantic versioning with the release script:
+
+```bash
+# one command: determine bump from last commit and publish
+npm run release:auto
+
+# dry-run variant
+npm run release:auto:dry-run
+```
+
+For CI pipelines, call `./scripts/release.sh release` directly.
+
+`release:auto` follows Conventional Commits on the latest commit:
+
+- `major`: commit has `BREAKING CHANGE` or uses `!` in the type (for example `feat!: ...`)
+- `minor`: commit type is `feat`
+- `patch`: default fallback
+
+`release:auto` also creates a git commit for version files:
+
+- `package.json`
+- `package-lock.json`
+
 ## License
 
 MIT
