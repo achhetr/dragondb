@@ -34,13 +34,13 @@ npm run build
 ### Option B: Use as a Git dependency
 
 ```bash
-npm install github:akashpaudel/saiyandb
+npm install @akashbro/saiyandb
 ```
 
 ## Quick Usage
 
 ```ts
-import { createDALFromYaml } from "saiyandb";
+import { createDALFromYaml } from "@akashbro/saiyandb";
 
 const dal = await createDALFromYaml("./config/db.config.yaml", {
   envFilePath: ".env",

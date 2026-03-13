@@ -17,8 +17,8 @@ npm run build
 Or:
 
 ```bash
-# Git dependency
-npm install github:akashpaudel/saiyandb
+# npm
+npm install @akashbro/saiyandb
 ```
 
 ## 2) Create config files
@@ -69,7 +69,7 @@ Failovers are matched to this list by provider order in YAML. In this example:
 ## 3) Initialize and query
 
 ```ts
-import { createDALFromYaml } from "saiyandb";
+import { createDALFromYaml } from "@akashbro/saiyandb";
 
 const dal = await createDALFromYaml("./config/db.config.yaml", {
   envFilePath: ".env",

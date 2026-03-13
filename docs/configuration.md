@@ -94,7 +94,7 @@ By default, YAML parsing is strict:
 You can disable strict unknown-key checks with `strict: false`:
 
 ```ts
-import { createDALFromYaml } from "saiyandb";
+import { createDALFromYaml } from "@akashbro/saiyandb";
 
 const dal = await createDALFromYaml("./config/db.config.yaml", {
   envFilePath: ".env",
@@ -114,7 +114,7 @@ Provider names are validated against one of:
 Example:
 
 ```ts
-import { createDALFromYaml } from "saiyandb";
+import { createDALFromYaml } from "@akashbro/saiyandb";
 
 const dal = await createDALFromYaml("./config/db.config.yaml", {
   envFilePath: ".env",
