@@ -21,8 +21,8 @@ Integration tests validate real PostgreSQL failover behavior using isolated data
 For host-based integration tests:
 
 ```bash
-PRIMARY_DB_URL=postgres://postgres:postgres@localhost:55432/saiyandb_primary
-FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:55433/saiyandb_failover1,postgres://postgres:postgres@localhost:55434/saiyandb_failover2
+PRIMARY_DB_URL=postgres://postgres:postgres@localhost:56432/saiyandb_primary
+FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:56433/saiyandb_failover1,postgres://postgres:postgres@localhost:56434/saiyandb_failover2
 ```
 
 These credentials are local test defaults only.
@@ -50,6 +50,11 @@ npm run integration:down
 ```
 
 Copy default integration values from `docker/integration/.env.example` when needed.
+
+Integration Docker ports (`56432-56434`) are intentionally separate from playground ports
+(`55432-55434`) so both stacks can run at the same time.
+If you customize ports and hit bind errors, stop playground containers first:
+`cd playground && npm run db:down`.
 
 ## Important fixtures
 

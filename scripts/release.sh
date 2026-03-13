@@ -12,6 +12,7 @@ Usage:
 
 Notes:
   - bump updates package.json + package-lock.json without creating a git tag/commit.
+  - bump also updates playground dependency + lockfile to the new package version.
   - bump auto uses the latest commit message (Conventional Commits style):
       * major: BREAKING CHANGE in body or "type(scope)!: ..."
       * minor: "feat: ..." or "feat(scope): ..."
@@ -68,6 +69,21 @@ run_publish() {
   npm "${publish_args[@]}"
 }
 
+sync_playground_dependency() {
+  new_version="$1"
+  playground_dir="playground"
+  playground_pkg="${playground_dir}/package.json"
+
+  if [[ ! -f "$playground_pkg" ]]; then
+    echo "Skipping playground dependency sync (${playground_pkg} not found)."
+    return 0
+  fi
+
+  npm pkg set "dependencies.@akashbro/saiyandb=^${new_version}" --prefix "$playground_dir"
+  npm install --package-lock-only --prefix "$playground_dir"
+  echo "Playground dependency updated to @akashbro/saiyandb@^${new_version}."
+}
+
 commit_version_files() {
   new_version="$1"
 
@@ -76,7 +92,7 @@ commit_version_files() {
     return 0
   fi
 
-  git add package.json package-lock.json
+  git add package.json package-lock.json playground/package.json playground/package-lock.json
   if git diff --cached --quiet; then
     echo "No version file changes to commit."
     return 0
@@ -107,7 +123,9 @@ case "$command" in
     fi
 
     npm version "$level" --no-git-tag-version
-    echo "Version bumped ($level). Commit package files and tag as needed."
+    new_version="$(npm pkg get version | tr -d '"')"
+    sync_playground_dependency "$new_version"
+    echo "Version bumped ($level) to v${new_version}. Commit package files and tag as needed."
     ;;
 
   determine-bump)
@@ -173,6 +191,7 @@ case "$command" in
     echo "Auto-detected bump level from last commit: $level"
     npm version "$level" --no-git-tag-version
     new_version="$(npm pkg get version | tr -d '"')"
+    sync_playground_dependency "$new_version"
     commit_version_files "$new_version"
     echo "Version bumped ($level) to v${new_version}. Publishing package..."
     run_publish "$dry_run" "$tag"

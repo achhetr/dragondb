@@ -90,10 +90,23 @@ npm run test:integration:docker
 npm run integration:down
 ```
 
+Integration uses host ports `56432-56434`, while playground uses `55432-55434`,
+so both can run in parallel without port collisions.
+If you changed ports locally and see bind errors, stop playground DB containers first:
+`cd playground && npm run db:down`.
+
 ## Playground (published package)
 
 Use the standalone playground in `playground` to test the latest published
 `@akashbro/saiyandb` against multiple Postgres providers.
+
+The playground uses one entrypoint (`run.ts`) that:
+
+- runs health checks for primary and failovers
+- executes a sample query (`SELECT 1 as ok`)
+- prints provider-level logs, selected provider, and returned rows
+
+From the repo root:
 
 ```bash
 cd playground
@@ -102,7 +115,23 @@ npm run start
 npm run db:down
 ```
 
-See `playground/README.md` for full instructions.
+Useful playground commands (inside `playground`):
+
+```bash
+npm run test
+npm run db:up
+npm run db:down
+```
+
+To simulate failover behavior:
+
+```bash
+docker compose -f docker-compose.yml stop primary-db
+npm run test
+docker compose -f docker-compose.yml start primary-db
+```
+
+See `playground/README.md` for complete workflow and local tarball testing.
 
 ## Versioning and publishing
 
