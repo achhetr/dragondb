@@ -1,0 +1,28 @@
+defaultDbType: pg
+queryTimeoutMs: 5000
+healthcheckTimeoutMs: 3000
+
+failover:
+  enabled: true
+  connectionStrings: DB_FAILOVER_URLS
+
+providers:
+  - name: aws-primary
+    role: primary
+    provider: aws
+    dbType: pg
+    ssl: false
+    env:
+      connectionString: DB_PRIMARY_URL
+
+  - name: gcp-failover-1
+    role: failover
+    provider: gcp
+    dbType: pg
+    enabled: true
+
+  - name: azure-failover-2
+    role: failover
+    provider: azure
+    dbType: pg
+    enabled: true

@@ -1,0 +1,42 @@
+services:
+  primary-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: saiyandb_primary
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saiyandb_primary"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  failover-1-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: saiyandb_failover1
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saiyandb_failover1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  failover-2-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: saiyandb_failover2
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saiyandb_failover2"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

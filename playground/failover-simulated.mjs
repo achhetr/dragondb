@@ -1,11 +1,11 @@
-import { createDALFromYaml } from "../src";
+import { createDALFromYaml } from "@akashbro/saiyandb";
 
-async function run(): Promise<void> {
-  const dal = await createDALFromYaml("./config/db.config.yaml.example", {
+async function run() {
+  const dal = await createDALFromYaml("./db.config.yaml", {
     envFilePath: ".env"
   });
-  const response = await dal.query("SELECT 1 as ok");
 
+  const response = await dal.query("SELECT 1 as ok");
   console.log("Query succeeded via provider:", response.meta.providerName);
   console.log("Provider type:", response.meta.providerType);
   console.log("Rows:", response.result.rows);

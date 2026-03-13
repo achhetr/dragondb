@@ -93,6 +93,21 @@ npm run test:integration:docker
 npm run integration:down
 ```
 
+## Published package playground
+
+Use the standalone playground in `playground` to test the latest published
+`@akashbro/saiyandb` against multiple Postgres providers.
+
+```bash
+# single command: install deps, create .env if missing, start DBs, run basic example
+npm run playground:start
+
+# cleanup command
+npm run playground:clean
+```
+
+See `playground/README.md` for full instructions.
+
 ## Versioning and publishing
 
 Use semantic versioning with the release script:
