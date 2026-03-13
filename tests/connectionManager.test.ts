@@ -157,3 +157,51 @@ test("primary cooldown skips immediate retry after a failure", async () => {
   assert.equal(primaryCalls, 1);
   await manager.close();
 });
+
+test("query failure paths redact secrets from logs and thrown errors", async () => {
+  const logEvents: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+  const logger: DBLogger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: (message, meta) => {
+      logEvents.push({ message, meta });
+    },
+    error: () => undefined
+  };
+
+  const manager = new ConnectionManager(
+    {
+      ...makeConfig(),
+      logger
+    },
+    {
+      createPool: (cfg) =>
+        ({
+          query: async (sql: string) => {
+            if (sql === "SELECT 1") {
+              return { rows: [{ provider: cfg.name }] };
+            }
+            throw new Error(`dial failed: postgres://app:supersecret@db.internal/${cfg.name}`);
+          },
+          end: async () => undefined
+        }) as DBClient,
+      resolveDbType: () => "pg"
+    }
+  );
+
+  let thrown: unknown;
+  try {
+    await manager.query("SELECT * FROM users");
+  } catch (error) {
+    thrown = error;
+  }
+
+  assert.ok(thrown instanceof Error);
+  assert.doesNotMatch(thrown.message, /supersecret/);
+  assert.match(thrown.message, /\[REDACTED\]/);
+
+  const serialized = JSON.stringify(logEvents);
+  assert.doesNotMatch(serialized, /supersecret/);
+  assert.match(serialized, /\[REDACTED\]/);
+  await manager.close();
+});

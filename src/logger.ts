@@ -1,19 +1,48 @@
 import type { DBLogger } from "./types";
 
-function sanitizeMeta(meta?: Record<string, unknown>): Record<string, unknown> | undefined {
+const BLOCKED_KEYS = ["password", "connectionString", "connString", "secret", "token"];
+
+function isBlockedKey(key: string): boolean {
+  const lowered = key.toLowerCase();
+  return BLOCKED_KEYS.some((blocked) => lowered.includes(blocked.toLowerCase()));
+}
+
+export function redactSensitiveText(input: string): string {
+  return input
+    .replace(/([a-z]+:\/\/[^:/\s]+:)([^@\s]+)(@)/gi, "$1[REDACTED]$3")
+    .replace(/([?&](?:password|token|secret)=)([^&\s]+)/gi, "$1[REDACTED]")
+    .replace(/((?:password|token|secret)\s*=\s*)([^,\s;]+)/gi, "$1[REDACTED]")
+    .replace(/((?:password|token|secret)\s*:\s*)([^,\s;}]+)/gi, "$1[REDACTED]");
+}
+
+function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
+  if (typeof value === "string") {
+    return redactSensitiveText(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValue(item, seen));
+  }
+  if (typeof value === "object" && value !== null) {
+    if (seen.has(value)) {
+      return "[Circular]";
+    }
+    seen.add(value);
+    const sanitizedObject: Record<string, unknown> = {};
+    for (const [key, nestedValue] of Object.entries(value)) {
+      sanitizedObject[key] = isBlockedKey(key) ? "[REDACTED]" : sanitizeValue(nestedValue, seen);
+    }
+    return sanitizedObject;
+  }
+  return value;
+}
+
+export function sanitizeMeta(meta?: Record<string, unknown>): Record<string, unknown> | undefined {
   if (!meta) {
     return undefined;
   }
 
-  const blockedKeys = ["password", "connectionString", "connString", "secret", "token"];
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(meta)) {
-    const lowered = key.toLowerCase();
-    sanitized[key] = blockedKeys.some((blocked) => lowered.includes(blocked))
-      ? "[REDACTED]"
-      : value;
-  }
-  return sanitized;
+  const seen = new WeakSet<object>();
+  return sanitizeValue(meta, seen) as Record<string, unknown>;
 }
 
 function print(

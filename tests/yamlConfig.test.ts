@@ -257,3 +257,40 @@ providers:
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("failover.connectionStrings rejects whitespace-only env value", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "saiyandb-yaml-test-"));
+  const yamlPath = join(dir, "db.yaml");
+
+  try {
+    const yaml = `
+defaultDbType: pg
+failover:
+  enabled: true
+  connectionStrings: FAILOVER_URLS
+providers:
+  - name: primary-db
+    role: primary
+    provider: aws
+    env:
+      connectionString: PRIMARY_URL
+  - name: failover-one
+    role: failover
+    provider: gcp
+`;
+    await writeFile(yamlPath, yaml, "utf8");
+
+    await assert.rejects(
+      () =>
+        loadDBConfigFromYaml(yamlPath, {
+          env: {
+            PRIMARY_URL: "postgres://postgres:postgres@localhost:5432/appdb",
+            FAILOVER_URLS: "   "
+          }
+        }),
+      /Missing required env vars referenced by YAML/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

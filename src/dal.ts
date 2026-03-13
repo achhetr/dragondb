@@ -1,6 +1,6 @@
 import { ConnectionManager } from "./connection/connectionManager";
 import { loadDBConfigFromYaml, type LoadYamlConfigOptions } from "./config/yamlConfig";
-import type { DBLogger, DBRow, HealthSnapshot, QueryExecutionResult } from "./types";
+import type { DBConfig, DBLogger, DBRow, HealthSnapshot, QueryExecutionResult } from "./types";
 
 const IDENTIFIER_REGEX = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -35,7 +35,16 @@ export interface CreateDALFromYamlOptions extends LoadYamlConfigOptions {
   primaryRetryCooldownMs?: number;
 }
 
-function createDALFromConnectionManager(manager: ConnectionManager): DAL {
+export interface DALManager {
+  query<T extends DBRow = DBRow>(
+    sql: string,
+    params?: readonly unknown[]
+  ): Promise<QueryExecutionResult<T>>;
+  checkAll(): Promise<HealthSnapshot>;
+  close(): Promise<void>;
+}
+
+export function createDALFromConnectionManager(manager: DALManager): DAL {
   return {
     async query<T extends DBRow = DBRow>(
       sql: string,
@@ -83,16 +92,19 @@ function createDALFromConnectionManager(manager: ConnectionManager): DAL {
   };
 }
 
+export function createDAL(config: DBConfig): DAL {
+  return createDALFromConnectionManager(new ConnectionManager(config));
+}
+
 export async function createDALFromYaml(
   yamlPath: string,
   options: CreateDALFromYamlOptions = {}
 ): Promise<DAL> {
   const { logger, primaryRetryCooldownMs, ...yamlOptions } = options;
   const loaded = await loadDBConfigFromYaml(yamlPath, yamlOptions);
-  const manager = new ConnectionManager({
+  return createDAL({
     ...loaded,
     logger,
     primaryRetryCooldownMs
   });
-  return createDALFromConnectionManager(manager);
 }

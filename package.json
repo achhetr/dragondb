@@ -16,7 +16,7 @@
     "lint:fix": "eslint . --fix",
     "prepare": "husky",
     "test": "npm run test:unit",
-    "test:unit": "tsx --test tests/connectionManager.test.ts tests/drivers.test.ts tests/yamlConfig.test.ts",
+    "test:unit": "tsx --test tests/*.test.ts",
     "test:integration": "tsx --test tests/integration/**/*.test.ts",
     "integration:up": "docker compose -f docker/integration/docker-compose.yml up -d primary-db failover-1-db failover-2-db",
     "integration:down": "docker compose -f docker/integration/docker-compose.yml down -v",
@@ -24,7 +24,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "example": "tsx examples/basic.ts",
     "example:failover": "tsx examples/failover-simulated.ts",
-    "example:yaml": "tsx examples/from-yaml.ts"
+    "example:yaml": "tsx examples/from-yaml.ts",
+    "prepublishOnly": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:unit"
   },
   "keywords": [
     "postgres",
@@ -45,6 +46,10 @@
   },
   "bugs": {
     "url": "https://github.com/akashpaudel/saiyandb/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "engines": {
     "node": ">=22.0.0",

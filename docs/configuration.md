@@ -27,6 +27,7 @@ Each provider:
 - `dbType` (optional string; defaults to `pg`)
 - `enabled` (optional boolean; defaults to `true`)
 - `ssl` (optional boolean)
+- `unsafeDisableTlsCertVerification` (optional boolean; `true` is unsafe and intended for local development only)
 - `env.connectionString` (required for `primary`; optional for `failover` when `failover.connectionStrings` is used)
 
 ## Example configuration
@@ -45,7 +46,7 @@ providers:
     role: primary
     provider: aws
     dbType: pg
-    ssl: false
+    ssl: true
     env:
       connectionString: PRIMARY_DB_URL
 
@@ -63,6 +64,23 @@ FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:5433/appdb,postgres://po
 
 When `failover.connectionStrings` is configured, enabled failover providers consume
 entries in list order.
+
+## Production security hardening
+
+- Enable `ssl: true` for every provider in production.
+- Keep `unsafeDisableTlsCertVerification` unset (or `false`) in production.
+- Use `unsafeDisableTlsCertVerification: true` only for local/dev self-signed cert workflows.
+- Use least-privileged DB users (read/write scopes only as needed).
+- Rotate DB credentials regularly and avoid long-lived shared credentials.
+- Keep `.env` files out of source control and secret scanners.
+
+### TLS behavior
+
+When `ssl: true`:
+
+- Default behavior verifies server certificates (`rejectUnauthorized: true`).
+- If `unsafeDisableTlsCertVerification: true`, certificate verification is disabled.
+- Disabling verification increases MITM risk and should never be used in production.
 
 ## Strict validation
 

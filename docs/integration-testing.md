@@ -25,6 +25,8 @@ PRIMARY_DB_URL=postgres://postgres:postgres@localhost:55432/saiyandb_primary
 FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:55433/saiyandb_failover1,postgres://postgres:postgres@localhost:55434/saiyandb_failover2
 ```
 
+These credentials are local test defaults only.
+
 `FAILOVER_DB_URLS` must include at least two URLs for full integration coverage.
 Failover providers consume this list in YAML failover order.
 
@@ -53,6 +55,15 @@ Copy default integration values from `docker/integration/.env.example` when need
 - Test file: `tests/integration/pg.test.ts`
 
 The tests intentionally use unreachable addresses for some scenarios to simulate provider failure and force failover path validation.
+
+## Security incident triage
+
+When debugging failures in production-like environments:
+
+- Correlate events by `queryId` across `query-attempt`, `primary-failed`, `failover-failed`, and `failover-success`.
+- Capture provider name, attempt number, and timing metadata first.
+- Do not log or paste full connection strings, passwords, or tokens into incident channels.
+- Rotate credentials and revoke exposed secrets immediately if any leak is suspected.
 
 ## CI behavior
 

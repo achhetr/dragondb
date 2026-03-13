@@ -21,6 +21,7 @@ interface YamlProviderConfig {
   dbType?: DatabaseType;
   enabled?: boolean;
   ssl?: boolean;
+  unsafeDisableTlsCertVerification?: boolean;
   env?: YamlProviderEnvRefs;
 }
 
@@ -41,6 +42,10 @@ export interface LoadYamlConfigOptions {
   namingStandard?: NamingStandard;
 }
 
+function hasEnvValue(value: string | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function pickValue<T>(
   inlineValue: T | undefined,
   envKey: string | undefined,
@@ -48,7 +53,7 @@ function pickValue<T>(
 ): T | undefined {
   if (envKey) {
     const raw = env[envKey];
-    if (raw !== undefined && raw !== "") {
+    if (hasEnvValue(raw)) {
       return raw as unknown as T;
     }
   }
@@ -164,7 +169,16 @@ function validateYamlConfig(
 
       pushUnknownKeysError(
         provider,
-        ["name", "role", "provider", "dbType", "enabled", "ssl", "env"],
+        [
+          "name",
+          "role",
+          "provider",
+          "dbType",
+          "enabled",
+          "ssl",
+          "unsafeDisableTlsCertVerification",
+          "env"
+        ],
         path,
         strict,
         errors
@@ -190,6 +204,12 @@ function validateYamlConfig(
       }
       if (provider.ssl !== undefined && typeof provider.ssl !== "boolean") {
         errors.push(`${path}.ssl must be a boolean.`);
+      }
+      if (
+        provider.unsafeDisableTlsCertVerification !== undefined &&
+        typeof provider.unsafeDisableTlsCertVerification !== "boolean"
+      ) {
+        errors.push(`${path}.unsafeDisableTlsCertVerification must be a boolean.`);
       }
       if (provider.env !== undefined) {
         if (!isRecord(provider.env)) {
@@ -247,13 +267,13 @@ function validateEnvReferences(parsed: YamlDBConfig, env: EnvMap): void {
       if (!envVar) {
         continue;
       }
-      if (!env[envVar]) {
+      if (!hasEnvValue(env[envVar])) {
         missing.push(`providers[${idx}].env.${key} -> ${envVar}`);
       }
     }
   });
 
-  if (failoverListEnvKey && !env[failoverListEnvKey]) {
+  if (failoverListEnvKey && !hasEnvValue(env[failoverListEnvKey])) {
     missing.push(`failover.connectionStrings -> ${failoverListEnvKey}`);
   }
 
@@ -276,7 +296,8 @@ function resolveProvider(
     provider: provider.provider,
     dbType: provider.dbType ?? "pg",
     connectionString,
-    ssl: provider.ssl
+    ssl: provider.ssl,
+    unsafeDisableTlsCertVerification: provider.unsafeDisableTlsCertVerification
   };
 }
 

@@ -39,6 +39,7 @@ providers:
     role: primary
     provider: aws
     dbType: pg
+    ssl: true
     env:
       connectionString: PRIMARY_DB_URL
 
@@ -59,6 +60,8 @@ Create `.env`:
 PRIMARY_DB_URL=postgres://postgres:postgres@localhost:5432/appdb
 FAILOVER_DB_URLS=postgres://postgres:postgres@localhost:5433/appdb,postgres://postgres:postgres@localhost:5434/appdb
 ```
+
+These credentials are examples for local development only. Never reuse example passwords in shared, CI, or production environments.
 
 Failovers are matched to this list by provider order in YAML. In this example:
 `failover-1-real` uses the first URL and `failover-2-real` uses the second URL.
@@ -96,3 +99,10 @@ npm run integration:down
 ```
 
 For host-based runs and environment details, see `docs/integration-testing.md`.
+
+## Production checklist
+
+- Use strong, rotated credentials and least-privileged DB roles.
+- Keep `.env` out of git and secret-share channels.
+- Keep `ssl: true` enabled for all providers.
+- Do not set `unsafeDisableTlsCertVerification` outside local development.

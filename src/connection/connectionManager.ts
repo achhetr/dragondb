@@ -1,6 +1,6 @@
 import { createDriverPool, resolveDatabaseType } from "../drivers";
 import { checkProviderHealth } from "../health/healthChecker";
-import { defaultLogger } from "../logger";
+import { defaultLogger, redactSensitiveText } from "../logger";
 import type {
   CloudDBConfig,
   DBClient,
@@ -136,7 +136,7 @@ export class ConnectionManager {
         this.primaryFailedAtMs = undefined;
         return response;
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = redactSensitiveText(error instanceof Error ? error.message : String(error));
         errors.push(`primary(${this.primary.config.name}): ${message}`);
         this.primaryFailedAtMs = Date.now();
         this.logger.warn("Primary provider failed, attempting failovers", {
@@ -169,7 +169,7 @@ export class ConnectionManager {
         });
         return response;
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = redactSensitiveText(error instanceof Error ? error.message : String(error));
         errors.push(`failover(${failover.config.name}): ${message}`);
         this.logger.warn("Failover provider failed", {
           event: "failover-failed",
@@ -182,7 +182,7 @@ export class ConnectionManager {
       }
     }
 
-    throw new Error(`All providers failed for query. Attempts: ${errors.join(" | ")}`);
+    throw new Error(`All providers failed for queryId ${queryId}. Attempts: ${errors.join(" | ")}`);
   }
 
   public async checkPrimary(): Promise<ProviderHealth> {

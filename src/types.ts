@@ -26,6 +26,7 @@ export interface CloudDBConfig {
   username?: string;
   password?: string;
   ssl?: boolean;
+  unsafeDisableTlsCertVerification?: boolean;
 }
 
 export interface DBLogger {

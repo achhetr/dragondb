@@ -1,6 +1,18 @@
 import { Pool, type PoolConfig } from "pg";
 import type { CloudDBConfig, DBClient } from "../types";
 
+export function buildPostgresPoolConfig(cfg: CloudDBConfig, queryTimeoutMs?: number): PoolConfig {
+  return {
+    connectionString: cfg.connectionString,
+    ssl: cfg.ssl
+      ? {
+          rejectUnauthorized: !cfg.unsafeDisableTlsCertVerification
+        }
+      : false,
+    statement_timeout: queryTimeoutMs
+  };
+}
+
 export function createPostgresPool(cfg: CloudDBConfig, queryTimeoutMs?: number): DBClient {
   if (!cfg.connectionString) {
     throw new Error(
@@ -8,10 +20,5 @@ export function createPostgresPool(cfg: CloudDBConfig, queryTimeoutMs?: number):
     );
   }
 
-  const poolConfig: PoolConfig = {
-    connectionString: cfg.connectionString,
-    ssl: cfg.ssl ? { rejectUnauthorized: false } : false,
-    statement_timeout: queryTimeoutMs
-  };
-  return new Pool(poolConfig);
+  return new Pool(buildPostgresPoolConfig(cfg, queryTimeoutMs));
 }
